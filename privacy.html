@@ -9,24 +9,31 @@
   h1 { font-size: 28px; margin-bottom: 8px; }
   p.updated { color: #666; margin-bottom: 32px; }
   h2 { font-size: 18px; margin-top: 28px; }
+  a { color: #fe2c55; }
 </style>
 </head>
 <body>
 <h1>Privacy Policy</h1>
 <p class="updated">Last updated: August 2026</p>
 
-<p>Social Dashboard Sync accesses post performance metrics (views, likes, comments, shares, and related engagement data) from a TikTok account via the official TikTok API, for the sole purpose of displaying this information on a private analytics dashboard.</p>
+<p>Social Dashboard Sync is a multi-account social media analytics service. With a user's explicit authorization via the official TikTok API, it retrieves post performance metrics (views, likes, comments, shares, follower counts, and related engagement data) and displays them on a secure, password-protected analytics dashboard so account owners and their authorized team members can track performance over time.</p>
 
 <h2>Data We Access</h2>
-<p>We access publicly available or account-owned post metrics only. We do not access private messages, personal contact details, or any data unrelated to post performance.</p>
+<p>Through the TikTok API, and only after a user connects their account via TikTok's official OAuth authorization flow, we access: basic profile information (display name, avatar, follower/following/likes counts) and public post metrics (video titles, view/like/comment/share counts). We do not access private messages, personal contact details, payment information, or any data unrelated to public post performance.</p>
 
-<h2>Data Storage</h2>
-<p>Data retrieved is stored only in a private Google Sheets document controlled by the account owner, and is not shared with, sold to, or accessed by any third party.</p>
+<h2>Data Storage and Security</h2>
+<p>Connected account data is stored in encrypted form in our secure cloud infrastructure (Netlify Blobs), accessible only to authenticated, authorized users of the account that connected it. OAuth refresh tokens are encrypted at rest. We do not sell, rent, or share this data with third parties for advertising or any other unauthorized purpose.</p>
 
-<h2>Data Retention</h2>
-<p>Data is retained only as long as needed for reporting purposes and can be deleted at any time by the account owner.</p>
+<h2>Data Retention and Deletion</h2>
+<p>Data is retained for as long as the account remains connected to the dashboard. A user can disconnect their TikTok account and permanently delete all associated stored data at any time from within the dashboard.</p>
+
+<h2>Automatic Refresh</h2>
+<p>To keep dashboards accurate, connected accounts are periodically re-synced with TikTok (approximately every 15 minutes) so that new posts appear and deleted posts are automatically removed from the dashboard.</p>
+
+<h2>Your Rights</h2>
+<p>You may disconnect your TikTok account and request deletion of your data at any time. You may also revoke this application's access directly from your TikTok account settings.</p>
 
 <h2>Contact</h2>
-<p>For any privacy-related questions, please contact the account owner directly.</p>
+<p>For any privacy-related questions, please contact us through the details provided on our website.</p>
 </body>
 </html>
