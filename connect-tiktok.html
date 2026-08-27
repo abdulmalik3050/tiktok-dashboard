@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ربط حساب TikTok</title>
+<style>
+  body {
+    font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+    background: #0f1729;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .card {
+    background: #1c2a4a;
+    padding: 40px;
+    border-radius: 16px;
+    text-align: center;
+    max-width: 360px;
+  }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  p { color: #9aa5c0; font-size: 14px; margin-bottom: 24px; }
+  button {
+    background: #fe2c55;
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button:hover { opacity: 0.9; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🎵 ربط حساب TikTok</h1>
+    <p>اضغط الزر لتسجيل الدخول عبر TikTok والسماح بقراءة إحصائيات منشوراتك</p>
+    <button onclick="loginWithTikTok()">تسجيل الدخول عبر TikTok</button>
+  </div>
+
+  <script>
+    // Only logged-in company users can link an account.
+    (async function checkAuth() {
+      try {
+        const res = await fetch('/.netlify/functions/auth-me', { credentials: 'same-origin' });
+        const data = await res.json();
+        if (!data.authenticated) {
+          window.location.href = '/login.html';
+        }
+      } catch (e) {
+        window.location.href = '/login.html';
+      }
+    })();
+
+    // The Client Key now lives server-side only (Netlify env var TIKTOK_CLIENT_KEY),
+    // read inside netlify/functions/tiktok-login.js. This page just redirects
+    // to that function, which builds the TikTok auth URL and redirects the user.
+    function loginWithTikTok() {
+      window.location.href = "/.netlify/functions/tiktok-login";
+    }
+  </script>
+</body>
+</html>

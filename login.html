@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الدخول — لوحة تحكم TikTok</title>
+<style>
+  :root {
+    --bg-main: #F4F6FB;
+    --bg-card: #FFFFFF;
+    --accent: #3D5A80;
+    --accent2: #5B8F7F;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.06);
+    --error: #EF4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-main);
+    color: var(--text);
+    direction: rtl;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: var(--bg-card);
+    border-radius: 18px;
+    box-shadow: var(--card-shadow);
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .logo { text-align: center; font-size: 2rem; margin-bottom: 6px; }
+  h1 { text-align: center; font-size: 1.2rem; margin-bottom: 4px; }
+  .sub { text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 24px; }
+  label { display: block; font-size: 0.85rem; margin-bottom: 6px; color: var(--text); font-weight: 600; }
+  input {
+    width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 0.95rem; margin-bottom: 16px; font-family: inherit; direction: rtl;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  button {
+    width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none;
+    border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  button:hover { opacity: 0.92; }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .error-box {
+    background: #FEF2F2; color: var(--error); border: 1px solid #FECACA; border-radius: 10px;
+    padding: 10px 14px; font-size: 0.85rem; margin-bottom: 16px; display: none;
+  }
+  .toggle-row { text-align: center; margin-top: 18px; font-size: 0.82rem; color: var(--text-muted); }
+  .toggle-row a { color: var(--accent); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">📊</div>
+  <h1 id="formTitle">تسجيل الدخول</h1>
+  <p class="sub" id="formSub">لوحة تحكم حسابات TikTok</p>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <form id="authForm">
+    <label for="username">اسم المستخدم</label>
+    <input type="text" id="username" autocomplete="username" required>
+
+    <label for="password">كلمة المرور</label>
+    <input type="password" id="password" autocomplete="current-password" required>
+
+    <div id="setupTokenWrap" style="display:none;">
+      <label for="setupToken">رمز الإعداد الأولي (Setup Token)</label>
+      <input type="text" id="setupToken" autocomplete="off">
+    </div>
+
+    <button type="submit" id="submitBtn">دخول</button>
+  </form>
+
+  <div class="toggle-row" id="toggleRow" style="display:none;"></div>
+</div>
+
+<script>
+const form = document.getElementById('authForm');
+const errorBox = document.getElementById('errorBox');
+const submitBtn = document.getElementById('submitBtn');
+const formTitle = document.getElementById('formTitle');
+const formSub = document.getElementById('formSub');
+const setupTokenWrap = document.getElementById('setupTokenWrap');
+
+let mode = 'login'; // or 'setup'
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.style.display = 'block';
+}
+function hideError() {
+  errorBox.style.display = 'none';
+}
+
+async function init() {
+  try {
+    const res = await fetch('/.netlify/functions/auth-me', { credentials: 'same-origin' });
+    const data = await res.json();
+
+    if (data.authenticated) {
+      window.location.href = '/accounts.html';
+      return;
+    }
+
+    if (!data.setupComplete) {
+      mode = 'setup';
+      formTitle.textContent = 'إعداد أول حساب مدير';
+      formSub.textContent = 'لم يتم إعداد أي حساب بعد — أنشئ حساب المدير الأول';
+      setupTokenWrap.style.display = 'block';
+      document.getElementById('setupToken').required = true;
+      submitBtn.textContent = 'إنشاء الحساب';
+    }
+  } catch (err) {
+    // If we can't reach auth-me, just show the normal login form.
+  }
+}
+init();
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  hideError();
+  submitBtn.disabled = true;
+  submitBtn.textContent = mode === 'setup' ? 'جاري الإنشاء…' : 'جاري الدخول…';
+
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+
+  try {
+    if (mode === 'setup') {
+      const setupToken = document.getElementById('setupToken').value.trim();
+      const res = await fetch('/.netlify/functions/auth-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setup_token: setupToken, username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'حدث خطأ');
+
+      // Now log in with the same credentials.
+      const loginRes = await fetch('/.netlify/functions/auth-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ username, password }),
+      });
+      const loginData = await loginRes.json();
+      if (!loginRes.ok) throw new Error(loginData.error || 'تم الإنشاء، الرجاء تسجيل الدخول يدويًا.');
+      window.location.href = '/accounts.html';
+    } else {
+      const res = await fetch('/.netlify/functions/auth-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'حدث خطأ');
+      window.location.href = '/accounts.html';
+    }
+  } catch (err) {
+    showError(err.message || String(err));
+    submitBtn.disabled = false;
+    submitBtn.textContent = mode === 'setup' ? 'إنشاء الحساب' : 'دخول';
+  }
+});
+</script>
+
+</body>
+</html>

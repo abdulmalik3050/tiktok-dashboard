@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الحسابات المتصلة</title>
+<style>
+  :root {
+    --bg-main: #F4F6FB;
+    --bg-card: #FFFFFF;
+    --accent: #3D5A80;
+    --accent2: #5B8F7F;
+    --accent5: #EF4444;
+    --warn: #D9A066;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.06);
+    --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.08), 0 12px 28px rgba(0,0,0,0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-main);
+    color: var(--text);
+    direction: rtl;
+    min-height: 100vh;
+  }
+  header {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(20px);
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 700; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .btn {
+    background: var(--accent); color: #fff; text-decoration: none;
+    padding: 9px 16px; border-radius: 10px; font-size: 0.85rem; border: none; cursor: pointer;
+    font-family: inherit;
+  }
+  .btn.secondary { background: var(--accent2); }
+  .btn.ghost { background: none; color: var(--text-muted); border: 1px solid var(--border); }
+  .whoami { font-size: 0.82rem; color: var(--text-muted); }
+
+  .container { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  .banner { background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; padding: 12px 16px; border-radius: 10px; margin-bottom: 18px; font-size: 0.88rem; }
+  .banner.error { background: #FEF2F2; border-color: #FECACA; color: #991B1B; }
+
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+  .summary .kpi { background: var(--bg-card); border-radius: 14px; box-shadow: var(--card-shadow); padding: 16px 22px; flex: 1; min-width: 140px; text-align: center; }
+  .summary .kpi-value { display: block; font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+  .summary .kpi-label { font-size: 0.82rem; color: var(--text-muted); }
+
+  .accounts-list { display: flex; flex-direction: column; gap: 12px; }
+  .account-row {
+    background: var(--bg-card); border-radius: 14px; box-shadow: var(--card-shadow);
+    padding: 16px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    transition: box-shadow 0.15s ease;
+  }
+  .account-row:hover { box-shadow: var(--card-shadow-hover); }
+  .avatar {
+    width: 46px; height: 46px; border-radius: 50%; background: var(--accent);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1.05rem; flex-shrink: 0;
+  }
+  .account-info { flex: 1; min-width: 160px; }
+  .account-name { font-weight: 700; font-size: 0.98rem; display: flex; align-items: center; gap: 8px; }
+  .platform-badge { font-size: 0.68rem; background: #F1F5F9; color: var(--text-muted); padding: 2px 8px; border-radius: 20px; }
+  .account-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-left: 4px; }
+  .status-ok { background: #10B981; }
+  .status-warn { background: var(--warn); }
+
+  .mini-stats { display: flex; gap: 18px; }
+  .mini-stat { text-align: center; }
+  .mini-stat b { display: block; font-size: 1rem; }
+  .mini-stat span { font-size: 0.72rem; color: var(--text-muted); }
+
+  .row-actions { display: flex; gap: 8px; }
+  .row-actions a, .row-actions button {
+    font-size: 0.8rem; padding: 7px 12px; border-radius: 8px; text-decoration: none;
+    border: 1px solid var(--border); background: #fff; cursor: pointer; font-family: inherit; color: var(--text);
+  }
+  .row-actions .remove-btn { color: var(--accent5); border-color: #FECACA; }
+  .owner-tag { font-size: 0.7rem; color: var(--text-muted); background: #F1F5F9; padding: 2px 8px; border-radius: 20px; }
+
+  .empty-state { background: var(--bg-card); border-radius: 16px; box-shadow: var(--card-shadow); padding: 60px 20px; text-align: center; color: var(--text-muted); }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .empty-state a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .loading { text-align: center; padding: 60px; color: var(--text-muted); }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45);
+    align-items: center; justify-content: center; z-index: 200; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 28px; width: 100%; max-width: 380px; }
+  .modal h2 { font-size: 1.05rem; margin-bottom: 4px; }
+  .modal .sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 18px; }
+  .modal label { display: block; font-size: 0.82rem; margin-bottom: 6px; font-weight: 600; }
+  .modal input, .modal select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.9rem; margin-bottom: 14px; font-family: inherit; direction: rtl;
+  }
+  .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .modal-actions button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-family: inherit; cursor: pointer; font-size: 0.88rem; }
+  .modal-actions .confirm { background: var(--accent); color: #fff; }
+  .modal-actions .cancel { background: #F1F5F9; color: var(--text); }
+  .modal-error { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; margin-bottom: 12px; display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔗 الحسابات المتصلة</h1>
+  <div class="header-right">
+    <span class="whoami" id="whoami"></span>
+    <button class="btn secondary" id="manageUsersBtn" style="display:none;">👥 إدارة الفريق</button>
+    <a class="btn" href="/connect-tiktok.html">+ ربط حساب TikTok</a>
+    <a class="btn secondary" href="/dashboard.html">لوحة التحكم التفصيلية</a>
+    <button class="btn ghost" id="logoutBtn">خروج</button>
+  </div>
+</header>
+
+<div class="container">
+  <div id="banner"></div>
+  <div id="summary" class="summary" style="display:none;"></div>
+  <div id="content">
+    <div class="loading">جاري التحميل…</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="userModalOverlay">
+  <div class="modal">
+    <h2>إضافة عضو فريق جديد</h2>
+    <p class="sub">بيقدر يسجّل دخول ويربط حساباته الخاصة.</p>
+    <div class="modal-error" id="userModalError"></div>
+    <form id="newUserForm">
+      <label>اسم المستخدم</label>
+      <input type="text" id="newUsername" required>
+      <label>كلمة المرور (8 أحرف على الأقل)</label>
+      <input type="password" id="newPassword" required minlength="8">
+      <label>الصلاحية</label>
+      <select id="newRole">
+        <option value="member">عضو (يشوف حساباته بس)</option>
+        <option value="admin">مدير (يشوف كل شي)</option>
+      </select>
+      <div class="modal-actions">
+        <button type="button" class="cancel" id="cancelUserBtn">إلغاء</button>
+        <button type="submit" class="confirm" id="confirmUserBtn">إضافة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+async function checkAuthAndLoad() {
+  const meRes = await fetch('/.netlify/functions/auth-me', { credentials: 'same-origin' });
+  const me = await meRes.json();
+
+  if (!me.authenticated) {
+    window.location.href = '/login.html';
+    return;
+  }
+  document.getElementById('whoami').textContent = 'مرحبًا، ' + me.user.username + (me.user.role === 'admin' ? ' (مدير)' : '');
+
+  if (me.user.role === 'admin') {
+    document.getElementById('manageUsersBtn').style.display = 'inline-block';
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/.netlify/functions/auth-logout', { method: 'POST', credentials: 'same-origin' });
+    window.location.href = '/login.html';
+  });
+
+  setupUserModal();
+  showUrlBanners();
+  loadAccounts();
+}
+
+function setupUserModal() {
+  const overlay = document.getElementById('userModalOverlay');
+  const form = document.getElementById('newUserForm');
+  const errorBox = document.getElementById('userModalError');
+  const confirmBtn = document.getElementById('confirmUserBtn');
+
+  document.getElementById('manageUsersBtn').addEventListener('click', () => {
+    errorBox.style.display = 'none';
+    form.reset();
+    overlay.classList.add('open');
+  });
+  document.getElementById('cancelUserBtn').addEventListener('click', () => overlay.classList.remove('open'));
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorBox.style.display = 'none';
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'جاري الإضافة…';
+
+    try {
+      const res = await fetch('/.netlify/functions/auth-create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          username: document.getElementById('newUsername').value.trim(),
+          password: document.getElementById('newPassword').value,
+          role: document.getElementById('newRole').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'حدث خطأ');
+
+      overlay.classList.remove('open');
+      const bannerEl = document.getElementById('banner');
+      bannerEl.innerHTML = '<div class="banner">✅ تمت إضافة العضو بنجاح.</div>';
+    } catch (err) {
+      errorBox.textContent = err.message || String(err);
+      errorBox.style.display = 'block';
+    } finally {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'إضافة';
+    }
+  });
+}
+
+function showUrlBanners() {
+  const params = new URLSearchParams(window.location.search);
+  const bannerEl = document.getElementById('banner');
+  if (params.get('connected')) {
+    bannerEl.innerHTML = '<div class="banner">✅ تم ربط الحساب بنجاح.</div>';
+  } else if (params.get('error')) {
+    bannerEl.innerHTML = '<div class="banner error">⚠️ ' + escapeHtml(params.get('error')) + '</div>';
+  }
+}
+
+async function loadAccounts() {
+  const contentEl = document.getElementById('content');
+  const summaryEl = document.getElementById('summary');
+
+  try {
+    const res = await fetch('/.netlify/functions/list-accounts', { cache: 'no-store', credentials: 'same-origin' });
+    if (res.status === 401) { window.location.href = '/login.html'; return; }
+    const data = await res.json();
+    const accounts = data.accounts || [];
+
+    if (accounts.length === 0) {
+      contentEl.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🔗</div>
+          <h2>ما فيه حسابات مربوطة بعد</h2>
+          <p style="margin-top:8px;">اربط أول حساب TikTok عشان يبدأ يظهر هنا تلقائيًا.</p>
+          <p style="margin-top:16px;"><a href="/connect-tiktok.html">ربط حساب الآن ←</a></p>
+        </div>`;
+      return;
+    }
+
+    const totalFollowers = sum(accounts, 'follower_count');
+    const totalVideos = accounts.reduce((s, a) => s + ((a.videos && a.videos.length) || 0), 0);
+    const totalLikes = sum(accounts, 'likes_count');
+
+    summaryEl.style.display = 'flex';
+    summaryEl.innerHTML = `
+      <div class="kpi"><span class="kpi-value">${accounts.length}</span><span class="kpi-label">حسابات متصلة</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(totalFollowers)}</span><span class="kpi-label">إجمالي المتابعين</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(totalVideos)}</span><span class="kpi-label">إجمالي الفيديوهات</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(totalLikes)}</span><span class="kpi-label">إجمالي الإعجابات</span></div>
+    `;
+
+    const list = document.createElement('div');
+    list.className = 'accounts-list';
+
+    accounts.forEach((acc) => {
+      const row = document.createElement('div');
+      row.className = 'account-row';
+      const initial = (acc.display_name || '?').trim().charAt(0).toUpperCase();
+      const dateStr = acc.last_synced_at || acc.connected_at ? new Date(acc.last_synced_at || acc.connected_at).toLocaleString('ar-SA') : '';
+      const needsReconnect = acc.sync_status === 'needs_reconnect';
+
+      row.innerHTML = `
+        <div class="avatar">${initial}</div>
+        <div class="account-info">
+          <div class="account-name">
+            ${escapeHtml(acc.display_name || 'غير معروف')}
+            <span class="platform-badge">TikTok</span>
+            <span class="status-dot ${needsReconnect ? 'status-warn' : 'status-ok'}" title="${needsReconnect ? 'يحتاج إعادة ربط' : 'متصل'}"></span>
+            ${acc.connected_by ? `<span class="owner-tag">👤 ${escapeHtml(acc.connected_by)}</span>` : ''}
+          </div>
+          <div class="account-meta">${needsReconnect ? '⚠️ انتهت صلاحية الاتصال — أعد الربط' : 'آخر تحديث: ' + dateStr}</div>
+        </div>
+        <div class="mini-stats">
+          <div class="mini-stat"><b>${fmt(acc.follower_count)}</b><span>متابعين</span></div>
+          <div class="mini-stat"><b>${fmt((acc.videos && acc.videos.length) || 0)}</b><span>فيديوهات</span></div>
+          <div class="mini-stat"><b>${fmt(acc.likes_count)}</b><span>إعجابات</span></div>
+        </div>
+        <div class="row-actions">
+          <a href="/dashboard.html?open_id=${encodeURIComponent(acc.open_id)}">التفاصيل</a>
+          <button class="remove-btn" data-id="${escapeHtml(acc.open_id)}">إزالة</button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+
+    contentEl.innerHTML = '';
+    contentEl.appendChild(list);
+
+    list.querySelectorAll('.remove-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('تأكيد إزالة هذا الحساب من اللوحة؟')) return;
+        btn.disabled = true;
+        btn.textContent = 'جاري الإزالة…';
+        try {
+          await fetch('/.netlify/functions/delete-account?open_id=' + encodeURIComponent(btn.dataset.id), {
+            method: 'POST',
+            credentials: 'same-origin',
+          });
+          loadAccounts();
+        } catch (e) {
+          alert('تعذّر حذف الحساب، حاول مرة أخرى.');
+          btn.disabled = false;
+          btn.textContent = 'إزالة';
+        }
+      });
+    });
+  } catch (err) {
+    contentEl.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><h2>تعذّر تحميل الحسابات</h2><p style="margin-top:8px;">${escapeHtml(String(err))}</p></div>`;
+  }
+}
+
+function sum(arr, key) { return arr.reduce((s, a) => s + (a[key] || 0), 0); }
+function fmt(n) { return Math.round(n || 0).toLocaleString('en-US'); }
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+checkAuthAndLoad();
+</script>
+
+</body>
+</html>
