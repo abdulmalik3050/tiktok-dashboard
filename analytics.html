@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة تحكم سوشال ميديا — ديناميكية</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg-main: #F4F6FB;
+    --bg-card: #FFFFFF;
+    --bg-card2: #F8FAFC;
+    --accent: #6366F1;
+    --accent2: #8B5CF6;
+    --accent3: #10B981;
+    --accent4: #F59E0B;
+    --accent5: #EF4444;
+    --accent6: #06B6D4;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.06);
+    --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.08), 0 12px 28px rgba(0,0,0,0.1);
+    --focus-ring: rgba(99,102,241,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-main);
+    color: var(--text);
+    direction: rtl;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 70% 10%, rgba(99,102,241,0.04) 0%, transparent 55%),
+                radial-gradient(ellipse at 20% 80%, rgba(139,92,246,0.03) 0%, transparent 50%);
+    z-index: -1;
+    pointer-events: none;
+  }
+  header {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  header h1 {
+    font-size: 1.35rem;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .file-input-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .file-input-wrap input[type=file] { display: none; }
+  .btn {
+    background: var(--accent);
+    color: #fff; border: none; padding: 10px 18px;
+    border-radius: 10px; cursor: pointer; font-size: 0.92rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.18);
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(99,102,241,0.25); }
+  .btn.outline { background: transparent; border: 1.5px solid var(--accent); color: var(--accent); box-shadow: none; }
+  .btn.outline:hover { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(99,102,241,0.2); }
+  .btn.accent3 { background: var(--accent3); box-shadow: 0 2px 8px rgba(16,185,129,0.18); }
+  .btn.accent4 { background: var(--accent4); color: #fff; box-shadow: 0 2px 8px rgba(245,158,11,0.18); }
+  .container { padding: 22px; max-width: 1400px; margin: 0 auto; }
+
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 22px; width: 100%; box-sizing: border-box;
+  }
+  @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  .kpi-card {
+    background: var(--bg-card);
+    border-radius: 14px;
+    padding: 20px 22px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    box-shadow: var(--card-shadow);
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover);
+    border-color: #CBD5E1;
+  }
+  .kpi-card .kpi-label { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 8px; letter-spacing: 0.3px; }
+  .kpi-card .kpi-value { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.5px; }
+  .kpi-card .kpi-change { font-size: 0.78rem; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; }
+  .kpi-change.up { color: #059669; }
+  .kpi-change.down { color: #DC2626; }
+  .kpi-card::before { content: ''; position: absolute; top: 0; right: 0; width: 100%; height: 3px; }
+  .kpi-card::after { content: ''; position: absolute; top: 0; right: 0; width: 3px; height: 100%; border-radius: 0 0 3px 0; }
+  .kpi-card.v1::before { background: linear-gradient(270deg, transparent, var(--accent)); }
+  .kpi-card.v1::after { background: var(--accent); }
+  .kpi-card.v2::before { background: linear-gradient(270deg, transparent, var(--accent2)); }
+  .kpi-card.v2::after { background: var(--accent2); }
+  .kpi-card.v3::before { background: linear-gradient(270deg, transparent, var(--accent3)); }
+  .kpi-card.v3::after { background: var(--accent3); }
+  .kpi-card.v4::before { background: linear-gradient(270deg, transparent, var(--accent4)); }
+  .kpi-card.v4::after { background: var(--accent4); }
+  .kpi-card.v5::before { background: linear-gradient(270deg, transparent, var(--accent5)); }
+  .kpi-card.v5::after { background: var(--accent5); }
+  .kpi-card.v6::before { background: linear-gradient(270deg, transparent, #06B6D4); }
+  .kpi-card.v6::after { background: #06B6D4; }
+  .kpi-card .kpi-icon {
+    position: absolute;
+    top: 14px;
+    left: 16px;
+    font-size: 1.3rem;
+    opacity: 0.4;
+  }
+
+  .section-title {
+    font-size: 1.1rem; margin: 26px 0 12px; color: var(--text);
+    border-right: 3px solid var(--accent);
+    padding-right: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; width: 100%; box-sizing: border-box; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 22px; width: 100%; box-sizing: border-box; }
+  @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--bg-card);
+    border-radius: 14px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    transition: all 0.25s ease;
+    box-shadow: var(--card-shadow);
+  }
+  .chart-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    border-color: #CBD5E1;
+  }
+  .chart-card h3 { font-size: 0.95rem; color: var(--text); margin-bottom: 12px; font-weight: 600; }
+
+  /* Premium timeline cards */
+  .timeline-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: var(--card-shadow);
+  }
+  .timeline-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--card-shadow-hover);
+    border-color: #CBD5E1;
+  }
+  .timeline-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3), var(--accent4));
+    opacity: 0.7;
+  }
+  .timeline-card .card-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+  }
+  .timeline-card h3 { font-size: 1.02rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .timeline-card h3 .icon { font-size: 1.15rem; }
+  .mini-stats {
+    display: flex; gap: 16px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .mini-stat { text-align: center; }
+  .mini-stat .lbl { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .mini-stat .val { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+  .mini-stat .val.up { color: #059669; }
+  .mini-stat .val.down { color: #DC2626; }
+  .timeline-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 22px; }
+  @media (max-width: 900px) { .timeline-wrap { grid-template-columns: 1fr; } }
+  .chart-area { position: relative; height: 330px; }
+  .timeline-legend { display: flex; gap: 18px; margin-top: 12px; font-size: 0.78rem; justify-content: center; }
+  .timeline-legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); }
+  .timeline-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; align-items: center; }
+  .filters select, .filters input {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .filters select:focus, .filters input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+
+  .table-wrap {
+    background: var(--bg-card);
+    border-radius: 14px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    box-shadow: var(--card-shadow);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { padding: 12px 14px; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--text-muted); font-weight: 600; }
+  tr:hover { background: rgba(99,102,241,0.04); }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; }
+  .badge.blue { background: rgba(99,102,241,0.1); color: var(--accent); }
+  .badge.purple { background: rgba(139,92,246,0.1); color: var(--accent2); }
+  .badge.green { background: rgba(16,185,129,0.1); color: var(--accent3); }
+  .badge.orange { background: rgba(245,158,11,0.1); color: var(--accent4); }
+  .badge.red { background: rgba(239,68,68,0.1); color: var(--accent5); }
+  .badge.cyan { background: rgba(6,182,212,0.1); color: #0891B2; }
+
+  .campaign-phase { margin-bottom: 22px; }
+  .phase-table {
+    width: 100%; border-collapse: collapse; font-size: 0.85rem;
+    background: var(--bg-card);
+    border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+  }
+  .phase-table th, .phase-table td { padding: 12px 14px; text-align: center; border-bottom: 1px solid var(--border); }
+  .phase-table th { background: var(--bg-card2); color: var(--text-muted); font-weight: 600; }
+  .phase-table tr:hover { background: rgba(99,102,241,0.04); }
+  .phase-header {
+    text-align: right; padding: 12px 16px; font-weight: 700;
+    color: var(--accent);
+    background: var(--bg-card2);
+    border-bottom: 1px solid var(--border);
+  }
+  .change-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 700; }
+  .change-pill.up { background: rgba(16,185,129,0.1); color: #059669; }
+  .change-pill.down { background: rgba(239,68,68,0.1); color: #DC2626; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 24px;
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 14px 22px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    opacity: 0; transition: all 0.4s ease; z-index: 1000; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  .meta-bar { color: var(--text-muted); font-size: 0.82rem; margin-bottom: 12px; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #F1F5F9; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📊 لوحة تحكم أداء سوشال ميديا — ديناميكية</h1>
+  <div class="file-input-wrap">
+    <label for="dataFile" class="btn outline">📁 رفع ملف Excel أو CSV</label>
+    <input type="file" id="dataFile" accept=".csv,.xlsx,.xls">
+    <button class="btn accent3" onclick="loadDemoData()">🔄 بيانات تجريبية</button>
+    <button class="btn accent4" onclick="exportCSV()">💾 تصدير CSV</button>
+    <a class="btn" style="background:#fe2c55;text-decoration:none;display:inline-flex;align-items:center;" href="/accounts.html">🔗 حسابات TikTok</a>
+  </div>
+</header>
+
+<div class="container" style="padding-bottom:0; margin-bottom:0;">
+  <div class="chart-card" style="margin-bottom:22px; background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--card-shadow);">
+    <h3>🔗 ربط تلقائي بـ Google Sheets (اختياري)</h3>
+    <div class="filters" style="margin-bottom:0;">
+      <input type="text" id="sheetUrl" placeholder="الصق رابط Google Sheets المنشور (CSV) هنا" style="flex:1; min-width:280px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px;">
+      <button class="btn" onclick="connectGoogleSheet()">🔌 ربط</button>
+      <select id="autoRefreshInterval" onchange="setupAutoRefresh()">
+        <option value="0">بدون تحديث تلقائي</option>
+        <option value="30">تحديث كل 30 ثانية</option>
+        <option value="60" selected>تحديث كل دقيقة</option>
+        <option value="300">تحديث كل 5 دقائق</option>
+      </select>
+      <span id="sheetStatus" style="color:var(--text-muted); font-size:0.82rem;"></span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="meta-bar" id="metaBar">لا توجد بيانات محملة</div>
+
+  <div class="filters">
+    <select id="filterPlatform" onchange="refreshAll()"><option value="all">جميع المنصات</option></select>
+    <select id="filterCampaign" onchange="refreshAll()"><option value="all">جميع الحملات</option></select>
+    <select id="filterContent" onchange="refreshAll()"><option value="all">جميع أنواع المحتوى</option></select>
+    <input type="date" id="dateFrom" onchange="refreshAll()">
+    <input type="date" id="dateTo" onchange="refreshAll()">
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="section-title">📈 أداء المنصات</div>
+  <div class="grid-2">
+    <div class="chart-card"><h3>إجمالي المشاهدات والوصول لكل منصة</h3><canvas id="chartPlatformBars"></canvas></div>
+    <div class="chart-card"><h3>التوزيع النسبي للمشاهدات</h3><canvas id="chartPlatformPie"></canvas></div>
+  </div>
+
+  <div class="section-title">📅 التطور الزمني للمؤشرات</div>
+  <div class="timeline-wrap">
+    <div class="timeline-card">
+      <div class="card-header"><h3><span class="icon">👁️</span> المشاهدات والوصول</h3><div class="mini-stats" id="statLine1"></div></div>
+      <div class="chart-area"><canvas id="chartTimeLine1"></canvas></div>
+      <div class="timeline-legend"><span><i style="background:var(--accent)"></i> المشاهدات</span><span><i style="background:var(--accent2)"></i> الوصول</span></div>
+    </div>
+    <div class="timeline-card">
+      <div class="card-header"><h3><span class="icon">🤝</span> التفاعل والنقرات</h3><div class="mini-stats" id="statLine2"></div></div>
+      <div class="chart-area"><canvas id="chartTimeLine2"></canvas></div>
+      <div class="timeline-legend"><span><i style="background:var(--accent3)"></i> التفاعل</span><span><i style="background:var(--accent4)"></i> النقرات</span></div>
+    </div>
+  </div>
+
+  <div class="section-title">🎯 قياس أداء الحملات (قبل / أثناء / بعد)</div>
+  <div id="campaignPhases"></div>
+
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let rawData = [];
+let charts = {};
+
+/* ========== PARSING ========== */
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = splitCSV(lines[0]);
+  const out = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = splitCSV(lines[i]);
+    if (values.length < headers.length) continue;
+    const obj = {};
+    headers.forEach((h, idx) => obj[h.trim()] = values[idx] ? values[idx].trim() : '');
+    out.push(obj);
+  }
+  return out;
+}
+function splitCSV(line) {
+  const res = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+      else { inQ = !inQ; }
+    } else if (ch === ',' && !inQ) { res.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  res.push(cur); return res;
+}
+
+function normalizeData(rows) {
+  return rows.map(r => {
+    const dateVal = normalizeDate((r['التاريخ'] || r['Date'] || r['date'] || r['تاريخ'] || '').toString().trim());
+    const platform = (r['المنصة'] || r['Platform'] || r['platform'] || '').trim();
+    const campaign = (r['الحملة'] || r['Campaign'] || r['campaign'] || '').trim();
+    const contentType = (r['نوع المحتوى'] || r['Content Type'] || r['content_type'] || r['نوع المحتوي'] || '').trim();
+    const views = num(r['المشاهدات'] || r['Views'] || r['views'] || 0);
+    const reach = num(r['الوصول'] || r['Reach'] || r['reach'] || 0);
+    const likes = num(r['الإعجابات'] || r['Likes'] || r['likes'] || 0);
+    const comments = num(r['التعليقات'] || r['Comments'] || r['comments'] || 0);
+    const shares = num(r['المشاركات'] || r['Shares'] || r['shares'] || 0);
+    const newFollowers = num(r['المتابعون الجدد'] || r['New Followers'] || r['new_followers'] || r['المتابعون'] || 0);
+    const engagementRate = num(r['نسبة التفاعل'] || r['Engagement Rate'] || r['engagement_rate'] || 0);
+    const clicks = num(r['النقرات'] || r['Clicks'] || r['clicks'] || 0);
+    const totalEngagement = likes + comments + shares;
+    return {
+      _raw: r, date: dateVal, platform, campaign, contentType,
+      views, reach, likes, comments, shares,
+      clicks: clicks || totalEngagement,
+      newFollowers, engagementRate, totalEngagement
+    };
+  }).filter(r => r.date && r.platform);
+}
+function num(v) {
+  if (v == null || v === '') return 0;
+  let s = String(v).trim();
+  const lastComma = s.lastIndexOf(',');
+  const lastDot = s.lastIndexOf('.');
+  if (lastComma > -1) {
+    const fracLen = s.length - lastComma - 1;
+    if (lastComma > lastDot && fracLen <= 2) {
+      // Comma is a decimal separator (e.g. "4,2" or "1.234,56")
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Comma is a thousands separator (e.g. "1,234")
+      s = s.replace(/,/g, '');
+    }
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+function normalizeDate(v) {
+  if (!v) return '';
+  // Excel serial date number (e.g. 45658)
+  if (/^\d+(\.\d+)?$/.test(v) && Number(v) > 20000 && Number(v) < 90000) {
+    const d = XLSX.SSF ? XLSX.SSF.parse_date_code(Number(v)) : null;
+    if (d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+  }
+  // Strip time portion: "2025-01-01 00:00:00" -> "2025-01-01"
+  let s = v.split(' ')[0].split('T')[0];
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // M/D/YYYY or MM/DD/YYYY
+  const mdY = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdY) return `${mdY[3]}-${mdY[1].padStart(2,'0')}-${mdY[2].padStart(2,'0')}`;
+  // D-M-YYYY
+  const dmY = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (dmY) return `${dmY[3]}-${dmY[2].padStart(2,'0')}-${dmY[1].padStart(2,'0')}`;
+  return s;
+}
+
+/* ========== GOOGLE SHEETS AUTO-SYNC ========== */
+let sheetRefreshTimer = null;
+let currentSheetUrl = '';
+
+function toCsvExportUrl(url) {
+  url = url.trim();
+  // Already a published CSV link (contains /pub) or already has output=csv -> use as-is
+  if (url.includes('/pub') || url.includes('output=csv') || url.includes('format=csv')) {
+    return url;
+  }
+  // Convert a normal "edit" Google Sheets link into an export CSV link
+  const editMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (editMatch) {
+    const gidMatch = url.match(/[?&#]gid=([0-9]+)/);
+    const gid = gidMatch ? gidMatch[1] : '0';
+    return `https://docs.google.com/spreadsheets/d/${editMatch[1]}/export?format=csv&gid=${gid}`;
+  }
+  return url;
+}
+
+async function connectGoogleSheet(silent) {
+  const input = document.getElementById('sheetUrl');
+  const status = document.getElementById('sheetStatus');
+  const url = input.value.trim();
+  if (!url) { if (!silent) showToast('⚠️ الصق رابط Google Sheets أولاً'); return; }
+  currentSheetUrl = url;
+  let fetchUrl = toCsvExportUrl(url);
+  fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + '_ts=' + Date.now();
+  try {
+    status.textContent = '⏳ جاري التحديث...';
+    const res = await fetch(fetchUrl, {cache: 'no-store'});
+    if (!res.ok) throw new Error('تعذر الوصول للرابط (تأكد أن الشيت "منشور على الويب" أو تتم مشاركته بصلاحية "أي شخص لديه الرابط")');
+    const text = await res.text();
+    rawData = normalizeData(parseCSV(text));
+    if (!rawData.length) throw new Error('لم يتم العثور على بيانات صالحة في الشيت');
+    refreshAll();
+    const now = new Date();
+    status.textContent = '✅ آخر تحديث: ' + now.toLocaleTimeString('ar');
+    if (!silent) showToast('✅ تم الربط والتحديث: ' + rawData.length + ' سجل');
+    setupAutoRefresh();
+  } catch (err) {
+    status.textContent = '❌ فشل التحديث';
+    if (!silent) showToast('❌ ' + err.message);
+  }
+}
+
+function setupAutoRefresh() {
+  if (sheetRefreshTimer) { clearInterval(sheetRefreshTimer); sheetRefreshTimer = null; }
+  const seconds = parseInt(document.getElementById('autoRefreshInterval').value, 10);
+  if (seconds > 0 && currentSheetUrl) {
+    sheetRefreshTimer = setInterval(() => connectGoogleSheet(true), seconds * 1000);
+  }
+}
+
+/* ========== FILE LOADING ========== */
+document.getElementById('dataFile').addEventListener('change', async function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const name = file.name.toLowerCase();
+  try {
+    if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, {type: 'array'});
+      const firstSheet = workbook.SheetNames[0];
+      const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {defval: ''});
+      rawData = normalizeData(json);
+    } else {
+      const text = await file.text();
+      rawData = normalizeData(parseCSV(text));
+    }
+    showToast('✅ تم تحميل الملف: ' + rawData.length + ' سجل');
+    refreshAll();
+  } catch (err) {
+    showToast('❌ خطأ في قراءة الملف: ' + err.message);
+  }
+});
+
+function loadDemoData() {
+  const platforms = ['Instagram','TikTok','X','YouTube','Snapchat'];
+  const campaigns = ['الصيف','رمضان','حملة الشتاء','اليوم الوطني','العودة للمدارس','العروض','منتج جديد'];
+  const types = ['صورة','فيديو','ريلز','قصة','منشور'];
+  const data = [];
+  const start = new Date('2025-01-01');
+  for (let i = 0; i < 1000; i++) {
+    const d = new Date(start); d.setDate(d.getDate() + Math.floor(i/3));
+    const p = platforms[i % platforms.length];
+    const c = campaigns[i % campaigns.length];
+    const ct = types[i % types.length];
+    const views = Math.floor(20000 + Math.random()*280000);
+    const reach = Math.floor(views * (0.5 + Math.random()*0.4));
+    const likes = Math.floor(views * (0.02 + Math.random()*0.06));
+    const comments = Math.floor(likes * (0.05 + Math.random()*0.15));
+    const shares = Math.floor(likes * (0.1 + Math.random()*0.2));
+    const newFollowers = Math.floor(reach * (0.01 + Math.random()*0.03));
+    const totalEngagement = likes + comments + shares;
+    const engagementRate = +((totalEngagement / Math.max(reach,1)) * 100).toFixed(2);
+    data.push({date: d.toISOString().split('T')[0], platform: p, campaign: c, contentType: ct,
+      views, reach, likes, comments, shares, clicks: totalEngagement, newFollowers, engagementRate, totalEngagement, _raw: {}});
+  }
+  rawData = data;
+  showToast('🔄 تم تحميل بيانات تجريبية: ' + rawData.length + ' سجل');
+  refreshAll();
+}
+
+/* ========== FILTERING ========== */
+function getFilteredData() {
+  const pf = document.getElementById('filterPlatform').value;
+  const cp = document.getElementById('filterCampaign').value;
+  const ct = document.getElementById('filterContent').value;
+  const df = document.getElementById('dateFrom').value;
+  const dt = document.getElementById('dateTo').value;
+  return rawData.filter(r => {
+    if (pf !== 'all' && r.platform !== pf) return false;
+    if (cp !== 'all' && r.campaign !== cp) return false;
+    if (ct !== 'all' && r.contentType !== ct) return false;
+    if (df && r.date < df) return false;
+    if (dt && r.date > dt) return false;
+    return true;
+  });
+}
+
+function refreshAll() {
+  populateFilters();
+  renderMeta();
+  renderKPIs();
+  renderCharts();
+  renderCampaignPhases();
+
+}
+
+function populateFilters() {
+  const pf = document.getElementById('filterPlatform');
+  const cp = document.getElementById('filterCampaign');
+  const ct = document.getElementById('filterContent');
+  const prevP = pf.value, prevC = cp.value, prevT = ct.value;
+  const platforms = [...new Set(rawData.map(r => r.platform))].filter(Boolean).sort();
+  const campaigns = [...new Set(rawData.map(r => r.campaign))].filter(Boolean).sort();
+  const types = [...new Set(rawData.map(r => r.contentType))].filter(Boolean).sort();
+  pf.innerHTML = '<option value="all">جميع المنصات</option>' + platforms.map(x => `<option value="${x}">${x}</option>`).join('');
+  cp.innerHTML = '<option value="all">جميع الحملات</option>' + campaigns.map(x => `<option value="${x}">${x}</option>`).join('');
+  ct.innerHTML = '<option value="all">جميع أنواع المحتوى</option>' + types.map(x => `<option value="${x}">${x}</option>`).join('');
+  pf.value = prevP; cp.value = prevC; ct.value = prevT;
+}
+
+function renderMeta() {
+  const el = document.getElementById('metaBar');
+  if (!rawData.length) { el.textContent = 'لا توجد بيانات محملة'; return; }
+  const dates = rawData.map(r => r.date).filter(Boolean).sort();
+  const from = dates[0] || '-', to = dates[dates.length-1] || '-';
+  el.textContent = `السجلات: ${rawData.length} | الفترة: ${from} → ${to}`;
+}
+
+/* ========== KPIs ========== */
+function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
+
+function renderKPIs() {
+  const data = getFilteredData();
+  const views = data.reduce((s, r) => s + r.views, 0);
+  const reach = data.reduce((s, r) => s + r.reach, 0);
+  const engagement = data.reduce((s, r) => s + r.totalEngagement, 0);
+  const clicks = data.reduce((s, r) => s + r.clicks, 0);
+  const followers = data.reduce((s, r) => s + r.newFollowers, 0);
+  const avgRate = data.length ? (data.reduce((s, r) => s + num(r.engagementRate), 0) / data.length) : 0;
+
+  // compute change vs previous mirrored period when date range is active
+  const df = document.getElementById('dateFrom').value;
+  const dt = document.getElementById('dateTo').value;
+  let changes = {views:0, reach:0, engagement:0, clicks:0, followers:0, rate:0};
+  if (df && dt) {
+    const rangeDays = (new Date(dt) - new Date(df)) / (86400000);
+    const prevEnd = new Date(df); prevEnd.setDate(prevEnd.getDate() - 1);
+    const prevStart = new Date(prevEnd); prevStart.setDate(prevStart.getDate() - Math.max(1, rangeDays));
+    const pStartStr = prevStart.toISOString().split('T')[0];
+    const pEndStr = prevEnd.toISOString().split('T')[0];
+    const prevData = rawData.filter(r => r.date >= pStartStr && r.date <= pEndStr);
+    const pViews = prevData.reduce((s, r) => s + r.views, 0);
+    const pReach = prevData.reduce((s, r) => s + r.reach, 0);
+    const pEng = prevData.reduce((s, r) => s + r.totalEngagement, 0);
+    const pClicks = prevData.reduce((s, r) => s + r.clicks, 0);
+    const pFollowers = prevData.reduce((s, r) => s + r.newFollowers, 0);
+    const pRate = prevData.length ? (prevData.reduce((s, r) => s + num(r.engagementRate), 0) / prevData.length) : 0;
+    changes.views = calcChange(pViews, views);
+    changes.reach = calcChange(pReach, reach);
+    changes.engagement = calcChange(pEng, engagement);
+    changes.clicks = calcChange(pClicks, clicks);
+    changes.followers = calcChange(pFollowers, followers);
+    changes.rate = calcChange(pRate, avgRate);
+  }
+
+  const items = [
+    {label:'إجمالي المشاهدات', value:fmt(views), change:changes.views, cls:'v1', icon:'👁️'},
+    {label:'إجمالي الوصول', value:fmt(reach), change:changes.reach, cls:'v2', icon:'📡'},
+    {label:'إجمالي التفاعل', value:fmt(engagement), change:changes.engagement, cls:'v3', icon:'🤝'},
+    {label:'إجمالي النقرات', value:fmt(clicks), change:changes.clicks, cls:'v4', icon:'👆'},
+    {label:'المتابعون الجدد', value:fmt(followers), change:changes.followers, cls:'v5', icon:'👥'},
+    {label:'معدل التفاعل', value:avgRate.toFixed(2)+'%', change:changes.rate, cls:'v6', icon:'📊'},
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = items.map(it => `
+    <div class="kpi-card ${it.cls}">
+      <div class="kpi-icon">${it.icon}</div>
+      <div class="kpi-label">${it.label}</div>
+      <div class="kpi-value">${it.value}</div>
+      ${it.change !== 0 ? `<div class="kpi-change ${it.change > 0 ? 'up' : 'down'}">${it.change > 0 ? '▲' : '▼'} ${Math.abs(it.change).toFixed(1)}%</div>` : '<div class="kpi-change" style="color:var(--text-muted)">—</div>'}
+    </div>
+  `).join('');
+}
+
+function calcChange(prev, curr) {
+  if (!prev || prev === 0) return 0;
+  return ((curr - prev) / prev) * 100;
+}
+
+/* ========== CHARTS ========== */
+function renderCharts() {
+  const data = getFilteredData();
+  const platforms = [...new Set(data.map(r => r.platform))].filter(Boolean);
+  const palette = ['#6366F1','#8B5CF6','#10B981','#F59E0B','#EF4444','#06B6D4','#EC4899','#14B8A6'];
+
+  const pViews = platforms.map(p => data.filter(r => r.platform === p).reduce((s, r) => s + r.views, 0));
+  const pReach = platforms.map(p => data.filter(r => r.platform === p).reduce((s, r) => s + r.reach, 0));
+  renderBarChart('chartPlatformBars', ['المشاهدات','الوصول'], platforms, [pViews, pReach], ['#6366F1','#8B5CF6']);
+  renderPieChart('chartPlatformPie', platforms, pViews, palette);
+
+  // time lines
+  const dates = [...new Set(data.map(r => r.date))].filter(Boolean).sort();
+  const agg = dates.map(d => {
+    const rows = data.filter(r => r.date === d);
+    return {date:d, views:sum(rows,'views'), reach:sum(rows,'reach'), engagement:sum(rows,'totalEngagement'), clicks:sum(rows,'clicks')};
+  });
+  let lineLabels = agg.map(a => a.date), lineViews = agg.map(a=>a.views), lineReach = agg.map(a=>a.reach), lineEng = agg.map(a=>a.engagement), lineClicks = agg.map(a=>a.clicks);
+  if (agg.length > 60) {
+    const byM = {};
+    agg.forEach(a => { const m = a.date.slice(0,7); if (!byM[m]) byM[m] = {views:0,reach:0,engagement:0,clicks:0}; byM[m].views+=a.views; byM[m].reach+=a.reach; byM[m].engagement+=a.engagement; byM[m].clicks+=a.clicks; });
+    lineLabels = Object.keys(byM).sort(); lineViews = lineLabels.map(m=>byM[m].views); lineReach = lineLabels.map(m=>byM[m].reach); lineEng = lineLabels.map(m=>byM[m].engagement); lineClicks = lineLabels.map(m=>byM[m].clicks);
+  }
+  renderLineChart('chartTimeLine1', lineLabels, ['المشاهدات','الوصول'], [lineViews,lineReach], ['#6366F1','#8B5CF6'], 'statLine1');
+  renderLineChart('chartTimeLine2', lineLabels, ['التفاعل','النقرات'], [lineEng,lineClicks], ['#10B981','#F59E0B'], 'statLine2');
+}
+function sum(arr, key) { return arr.reduce((s, r) => s + (r[key]||0), 0); }
+
+function renderBarChart(id, dsLabels, labels, dataArrays, colors) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: dsLabels.map((l,i)=>({label:l, data:dataArrays[i], backgroundColor: colors[i], borderRadius: 8})) },
+    options: { responsive: true, plugins: {legend:{position:'top', labels:{color:'#64748B'}}}, scales: {x:{grid:{color:'#F1F5F9'},ticks:{color:'#64748B'}}, y:{grid:{color:'#F1F5F9'},ticks:{color:'#64748B'}}} }
+  });
+}
+function renderPieChart(id, labels, data, colors) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{data, backgroundColor: colors.slice(0, labels.length), borderWidth: 0, hoverOffset: 8}] },
+    options: {
+      responsive: true,
+      cutout: '62%',
+      plugins: {
+        legend: {position:'right', labels:{color:'#475569', padding: 14, usePointStyle: true, pointStyle: 'circle', font: {size: 12}}},
+        tooltip: {
+          backgroundColor: 'rgba(255,255,255,0.96)',
+          titleColor: '#1E293B',
+          bodyColor: '#475569',
+          borderColor: 'rgba(99,102,241,0.15)',
+          borderWidth: 1,
+          padding: 14,
+          cornerRadius: 12
+        }
+      }
+    }
+  });
+}
+function renderLineChart(id, labels, dsLabels, dataArrays, colors, statContainerId) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (charts[id]) charts[id].destroy();
+
+  // Compute mini-stats for the stat container
+  if (statContainerId) {
+    const statsHtml = dsLabels.map((l, i) => {
+      const arr = dataArrays[i];
+      const total = arr.reduce((a, b) => a + b, 0);
+      const avg = Math.round(total / Math.max(1, arr.length));
+      const peak = Math.max(...arr);
+      const first = arr[0] || 0;
+      const last = arr[arr.length - 1] || 0;
+      const change = first ? ((last - first) / first) * 100 : 0;
+      const cls = change >= 0 ? 'up' : 'down';
+      return `
+        <div class="mini-stat">
+          <div class="lbl" style="color:${colors[i]}">${l}</div>
+          <div class="val">${fmt(avg)}</div>
+          <div class="val ${cls}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}%</div>
+        </div>`;
+    }).join('');
+    const el = document.getElementById(statContainerId);
+    if (el) el.innerHTML = statsHtml;
+  }
+
+  // Create strong glow gradients
+  const datasets = dsLabels.map((l, i) => {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+    gradient.addColorStop(0, colors[i] + '30');
+    gradient.addColorStop(0.4, colors[i] + '10');
+    gradient.addColorStop(1, colors[i] + '01');
+    return {
+      label: l,
+      data: dataArrays[i],
+      borderColor: colors[i],
+      backgroundColor: gradient,
+      fill: true,
+      tension: 0.5,
+      pointRadius: 0,
+      pointHoverRadius: 7,
+      pointBackgroundColor: colors[i],
+      pointBorderColor: 'rgba(255,255,255,0.9)',
+      pointBorderWidth: 2,
+      borderWidth: 3,
+      cubicInterpolationMode: 'monotone',
+      shadowColor: colors[i],
+      shadowBlur: 12,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0
+    };
+  });
+
+  charts[id] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 900, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(255,255,255,0.96)',
+          titleColor: '#1E293B',
+          bodyColor: '#475569',
+          borderColor: 'rgba(99,102,241,0.15)',
+          borderWidth: 1,
+          padding: 14,
+          cornerRadius: 12,
+          displayColors: true,
+          usePointStyle: true,
+          titleFont: { size: 13, weight: '600' },
+          bodyFont: { size: 12 },
+          callbacks: {
+            label: function(context) {
+              return ' ' + context.dataset.label + ': ' + fmt(context.parsed.y);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#F1F5F9', drawBorder: false, tickLength: 6 },
+          ticks: { color: '#64748B', maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 11 } }
+        },
+        y: {
+          grid: { color: '#F1F5F9', drawBorder: false, borderDash: [4, 4] },
+          ticks: { color: '#64748B', callback: function(v) { return fmt(v); }, font: { size: 11 } },
+          beginAtZero: true
+        }
+      },
+      interaction: { mode: 'index', intersect: false },
+      elements: { line: { capBezierPoints: true } }
+    }
+  });
+}
+
+/* ========== CAMPAIGN PHASES ========== */
+function renderCampaignPhases() {
+  const data = getFilteredData();
+  const campaigns = [...new Set(data.map(r => r.campaign))].filter(Boolean).sort();
+  if (!campaigns.length) { document.getElementById('campaignPhases').innerHTML = '<div style="color:var(--text-muted)">لا توجد حملات في البيانات المفلترة</div>'; return; }
+
+  let html = '';
+  campaigns.forEach(camp => {
+    const rows = data.filter(r => r.campaign === camp).sort((a,b) => a.date.localeCompare(b.date));
+    if (rows.length < 3) return;
+    const third = Math.max(1, Math.ceil(rows.length / 3));
+    const pre = rows.slice(0, third);
+    const during = rows.slice(third, third*2);
+    const post = rows.slice(third*2);
+
+    const metricNames = {views:'المشاهدات', reach:'الوصول', totalEngagement:'التفاعل', clicks:'النقرات', newFollowers:'المتابعون'};
+    const metrics = ['views','reach','totalEngagement','clicks','newFollowers'];
+
+    let rowsHtml = '';
+    metrics.forEach(m => {
+      const preV = sum(pre, m), duringV = sum(during, m), postV = sum(post, m);
+      const chDuring = calcChange(preV, duringV);
+      const chPost = calcChange(duringV, postV);
+      rowsHtml += `
+        <tr>
+          <td style="text-align:right; font-weight:600;">${metricNames[m]}</td>
+          <td>${fmt(preV)}</td>
+          <td>${fmt(duringV)} ${pill(chDuring)}</td>
+          <td>${fmt(postV)} ${pill(chPost)}</td>
+        </tr>`;
+    });
+    // engagement rate
+    const avgRate = (arr) => arr.length ? (arr.reduce((s,r)=>s+num(r.engagementRate),0)/arr.length) : 0;
+    const preR = avgRate(pre), duringR = avgRate(during), postR = avgRate(post);
+    const chR = calcChange(preR, duringR);
+    const chPostR = calcChange(duringR, postR);
+    rowsHtml += `
+      <tr>
+        <td style="text-align:right; font-weight:600;">معدل التفاعل</td>
+        <td>${preR.toFixed(2)}%</td>
+        <td>${duringR.toFixed(2)}% ${pill(chR)}</td>
+        <td>${postR.toFixed(2)}% ${pill(chPostR)}</td>
+      </tr>`;
+
+    html += `
+      <div style="margin-bottom:18px;">
+        <div class="phase-header">🎯 ${camp} <span style="font-weight:400; color:var(--text-muted); font-size:0.8rem;">— ${rows.length} يوم | قبل ${pre.length} / أثناء ${during.length} / بعد ${post.length}</span></div>
+        <table class="phase-table">
+          <thead><tr><th style="text-align:right">المؤشر</th><th>قبل الحملة</th><th>أثناء الحملة</th><th>بعد الحملة</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+  });
+  document.getElementById('campaignPhases').innerHTML = html;
+}
+function pill(v) {
+  if (!isFinite(v) || v === 0) return '';
+  const cls = v > 0 ? 'up' : 'down';
+  const arrow = v > 0 ? '▲' : '▼';
+  return `<span class="change-pill ${cls}">${arrow} ${Math.abs(v).toFixed(1)}%</span>`;
+}
+
+/* ========== TABLE ========== */
+/* ========== EXPORT ========== */
+function exportCSV() {
+  const data = getFilteredData();
+  if (!data.length) return;
+  const headers = ['التاريخ','المنصة','الحملة','نوع المحتوى','المشاهدات','الوصول','الإعجابات','التعليقات','المشاركات','المتابعون الجدد','نسبة التفاعل'];
+  const rows = data.map(r => [r.date, r.platform, r.campaign, r.contentType, r.views, r.reach, r.likes, r.comments, r.shares, r.newFollowers, r.engagementRate].join(','));
+  const csv = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'social_media_export.csv';
+  link.click();
+  showToast('💾 تم تصدير CSV');
+}
+
+/* ========== UTILS ========== */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ========== INIT ========== */
+loadDemoData();
+</script>
+</body>
+</html>
