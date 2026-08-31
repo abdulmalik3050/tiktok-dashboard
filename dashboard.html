@@ -173,21 +173,7 @@ function render(openId) {
         </div>
       </div>
     </div>
-    <div class="card">
-      <h2>كل الفيديوهات</h2>
-      <table>
-        <thead><tr><th>#</th><th>المشاهدات</th><th>الإعجابات</th><th>التعليقات</th><th>المشاركات</th></tr></thead>
-        <tbody>
-          ${videos.map((v, i) => `
-            <tr>
-              <td>فيديو ${i + 1}</td>
-              <td>${fmt(v.view_count)}</td>
-              <td>${fmt(v.like_count)}</td>
-              <td>${fmt(v.comment_count)}</td>
-              <td>${fmt(v.share_count)}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
+     
     </div>`
         : `
     <div class="card empty-state">
