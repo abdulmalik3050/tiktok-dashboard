@@ -108,6 +108,11 @@ async function syncAllAccounts() {
           like_count: v.like_count || 0,
           comment_count: v.comment_count || 0,
           share_count: v.share_count || 0,
+          // TikTok returns create_time as a Unix timestamp (seconds). We
+          // convert it to an ISO string so the dashboard can compare it
+          // against a campaign marker date to split videos into
+          // "before" / "after" groups.
+          create_time: v.create_time ? new Date(v.create_time * 1000).toISOString() : null,
         })),
         last_synced_at: new Date().toISOString(),
         sync_status: "ok",
