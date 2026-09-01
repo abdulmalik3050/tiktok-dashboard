@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم التفصيلية</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg-main: #F4F6FB;
+    --bg-card: #FFFFFF;
+    --accent: #3D5A80;
+    --accent2: #5B8F7F;
+    --accent3: #D9A066;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-main);
+    color: var(--text);
+    direction: rtl;
+    min-height: 100vh;
+  }
+  header {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(20px);
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 700; }
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+  .btn { background: var(--accent); color: #fff; text-decoration: none; padding: 9px 16px; border-radius: 10px; font-size: 0.85rem; border: none; cursor: pointer; font-family: inherit; }
+  .btn-ghost { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+  .picker-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  select, input[type="date"], input[type="text"] {
+    padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); font-family: inherit;
+    font-size: 0.9rem; background: #fff;
+  }
+  select { min-width: 220px; }
+  .status-pill { font-size: 0.78rem; padding: 4px 10px; border-radius: 20px; }
+  .status-ok { background: #ECFDF5; color: #065F46; }
+  .status-warn { background: #FFFBEB; color: #92400E; }
+
+  .kpis { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .kpi { background: var(--bg-card); border-radius: 14px; box-shadow: var(--card-shadow); padding: 18px 24px; flex: 1; min-width: 140px; text-align: center; }
+  .kpi-value { display: block; font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+  .kpi-label { font-size: 0.85rem; color: var(--text-muted); }
+
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 800px) { .charts { grid-template-columns: 1fr; } }
+  .card { background: var(--bg-card); border-radius: 14px; box-shadow: var(--card-shadow); padding: 20px; margin-bottom: 20px; }
+  .card h2 { font-size: 1.02rem; margin-bottom: 12px; }
+  .chart-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+  .chart-head h2 { margin-bottom: 0; }
+  .legend-row { display: flex; gap: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted); }
+  .legend-item i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .donut-layout { display: flex; align-items: center; gap: 18px; }
+  .donut-layout canvas { max-width: 230px; max-height: 230px; flex-shrink: 0; }
+  .donut-legend { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .donut-legend li { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+  .donut-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .donut-legend .legend-label { color: var(--text); flex: 1; }
+  .donut-legend .legend-pct { color: var(--text-muted); font-weight: 600; }
+
+  .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .loading { text-align: center; padding: 60px; color: var(--text-muted); }
+
+  /* ===== Campaign comparison ===== */
+  .campaign-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 0.8rem; color: var(--text-muted); }
+  .campaign-active { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .campaign-badge { background: #EEF2FF; color: var(--accent); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+  .compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+  .compare-cell { background: var(--bg-main); border-radius: 12px; padding: 14px 16px; text-align: center; }
+  .compare-cell .metric-name { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
+  .compare-cell .metric-values { display: flex; justify-content: center; align-items: baseline; gap: 6px; font-size: 1.05rem; font-weight: 700; }
+  .compare-cell .arrow { font-size: 0.85rem; }
+  .change-up { color: #16A34A; }
+  .change-down { color: #DC2626; }
+  .change-flat { color: var(--text-muted); }
+  .compare-note { font-size: 0.78rem; color: var(--text-muted); margin-top: 10px; }
+  .link-btn { background: none; border: none; color: var(--accent); font-family: inherit; font-size: 0.85rem; cursor: pointer; text-decoration: underline; padding: 0; }
+
+  /* ===== Color customization panel ===== */
+  .color-panel {
+    position: fixed; top: 0; left: 0; height: 100vh; width: 280px; background: #fff;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.12); padding: 22px; z-index: 200;
+    transform: translateX(-100%); transition: transform .25s ease;
+    overflow-y: auto;
+  }
+  .color-panel.open { transform: translateX(0); }
+  .color-panel h3 { font-size: 1rem; margin-bottom: 16px; }
+  .color-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .color-row label { font-size: 0.85rem; }
+  .color-row input[type="color"] { width: 42px; height: 32px; border: 1px solid var(--border); border-radius: 8px; padding: 2px; cursor: pointer; }
+  .color-panel-actions { display: flex; gap: 8px; margin-top: 20px; }
+  .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.35); z-index: 190; display: none; }
+  .overlay.open { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📈 لوحة التحكم التفصيلية</h1>
+  <div class="header-actions">
+    <button class="btn btn-ghost" id="openColorsBtn">🎨 تخصيص الألوان</button>
+    <a class="btn" href="/accounts.html">← الحسابات المتصلة</a>
+  </div>
+</header>
+
+<div class="overlay" id="overlay"></div>
+<div class="color-panel" id="colorPanel">
+  <h3>ألوان الرسومات البيانية</h3>
+  <div class="color-row"><label>لون المشاهدات</label><input type="color" id="colorViews"></div>
+  <div class="color-row"><label>لون الإعجابات</label><input type="color" id="colorLikes"></div>
+  <div class="color-row"><label>لون المشاركات</label><input type="color" id="colorShares"></div>
+  <div class="color-panel-actions">
+    <button class="btn" id="applyColorsBtn" style="flex:1;">تطبيق</button>
+    <button class="btn btn-ghost" id="resetColorsBtn">افتراضي</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="picker-row">
+    <select id="accountPicker"></select>
+    <span id="statusPill"></span>
+  </div>
+  <div id="content"><div class="loading">جاري التحميل…</div></div>
+</div>
+
+<script>
+let allAccounts = [];
+let viewsChart = null;
+let engagementChart = null;
+let currentOpenId = null;
+
+const DEFAULT_COLORS = { views: '#3D5A80', likes: '#5B8F7F', shares: '#D9A066' };
+
+function loadColors() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('dashboardChartColors') || 'null');
+    return saved ? { ...DEFAULT_COLORS, ...saved } : { ...DEFAULT_COLORS };
+  } catch (e) {
+    return { ...DEFAULT_COLORS };
+  }
+}
+function saveColors(colors) {
+  localStorage.setItem('dashboardChartColors', JSON.stringify(colors));
+}
+
+async function init() {
+  const meRes = await fetch('/.netlify/functions/auth-me', { credentials: 'same-origin' });
+  const me = await meRes.json();
+  if (!me.authenticated) { window.location.href = '/login.html'; return; }
+
+  const res = await fetch('/.netlify/functions/list-accounts', { cache: 'no-store', credentials: 'same-origin' });
+  if (res.status === 401) { window.location.href = '/login.html'; return; }
+  const data = await res.json();
+  allAccounts = data.accounts || [];
+
+  if (allAccounts.length === 0) {
+    document.querySelector('.picker-row').style.display = 'none';
+    document.getElementById('content').innerHTML = `
+      <div class="card empty-state">
+        <div class="empty-icon">📊</div>
+        <h2>ما فيه حسابات مربوطة بعد</h2>
+        <p style="margin-top:8px;"><a href="/connect-tiktok.html" style="color:var(--accent);font-weight:600;">اربط أول حساب ←</a></p>
+      </div>`;
+    return;
+  }
+
+  const picker = document.getElementById('accountPicker');
+  picker.innerHTML = allAccounts.map((a) => `<option value="${escapeHtml(a.open_id)}">${escapeHtml(a.display_name)}</option>`).join('');
+
+  const params = new URLSearchParams(window.location.search);
+  const requested = params.get('open_id');
+  if (requested && allAccounts.some((a) => a.open_id === requested)) {
+    picker.value = requested;
+  }
+
+  picker.addEventListener('change', () => render(picker.value));
+  render(picker.value);
+
+  initColorPanel();
+}
+
+function render(openId) {
+  const acc = allAccounts.find((a) => a.open_id === openId);
+  if (!acc) return;
+  currentOpenId = openId;
+
+  const pill = document.getElementById('statusPill');
+  const needsReconnect = acc.sync_status === 'needs_reconnect';
+  pill.innerHTML = needsReconnect
+    ? '<span class="status-pill status-warn">⚠️ يحتاج إعادة ربط</span>'
+    : '<span class="status-pill status-ok">✓ متصل</span>';
+
+  const videos = acc.videos || [];
+  const hasVideos = videos.length > 0;
+
+  const contentEl = document.getElementById('content');
+  contentEl.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><span class="kpi-value">${fmt(acc.follower_count)}</span><span class="kpi-label">متابعين</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(videos.length)}</span><span class="kpi-label">فيديوهات</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(acc.likes_count)}</span><span class="kpi-label">إجمالي الإعجابات</span></div>
+    </div>
+    ${
+      hasVideos
+        ? `
+    <div class="charts">
+      <div class="card">
+        <div class="chart-head">
+          <h2>المشاهدات والإعجابات لكل فيديو</h2>
+          <div class="legend-row" id="viewsLegend"></div>
+        </div>
+        <canvas id="viewsChart" height="230"></canvas>
+      </div>
+      <div class="card">
+        <h2>توزيع التفاعل</h2>
+        <div class="donut-layout">
+          <canvas id="engagementChart"></canvas>
+          <ul class="donut-legend" id="engagementLegend"></ul>
+        </div>
+      </div>
+    </div>`
+        : `
+    <div class="card empty-state">
+      <div class="empty-icon">📊</div>
+      <h2>لسه ما فيه فيديوهات لعرضها</h2>
+      <p>بمجرد ما ينشر هذا الحساب فيديوهات، بتظهر هنا رسومات تلقائيًا.</p>
+    </div>`
+    }
+    <div class="card" id="campaignCard"></div>
+  `;
+
+  if (hasVideos) drawCharts(videos);
+  renderCampaignCard(acc);
+}
+
+/* ========== CAMPAIGN BEFORE/AFTER COMPARISON ========== */
+
+function renderCampaignCard(acc) {
+  const el = document.getElementById('campaignCard');
+  const videos = (acc.videos || []).filter((v) => v.create_time);
+
+  if (acc.campaign && acc.campaign.date) {
+    el.innerHTML = renderCampaignComparison(acc, videos);
+    document.getElementById('editCampaignBtn')?.addEventListener('click', () => {
+      el.innerHTML = renderCampaignForm(acc);
+      bindCampaignFormEvents(acc);
+    });
+  } else {
+    el.innerHTML = renderCampaignForm(acc);
+    bindCampaignFormEvents(acc);
+  }
+}
+
+function renderCampaignForm(acc) {
+  const existingDate = acc.campaign && acc.campaign.date ? acc.campaign.date.slice(0, 10) : '';
+  const existingLabel = acc.campaign && acc.campaign.label ? acc.campaign.label : '';
+  return `
+    <h2>📌 مقارنة الأداء قبل/بعد إعلان أو تعاون</h2>
+    <p class="compare-note" style="margin-bottom:14px;">حدد تاريخ الإعلان أو التعاون مع المؤثر، ونقارن لك متوسط أداء الفيديوهات قبله وبعده تلقائيًا.</p>
+    <div class="campaign-form">
+      <div class="field">
+        <label>تاريخ الإعلان</label>
+        <input type="date" id="campaignDateInput" value="${escapeAttr(existingDate)}">
+      </div>
+      <div class="field" style="flex:1; min-width:180px;">
+        <label>وصف مختصر (اختياري)</label>
+        <input type="text" id="campaignLabelInput" placeholder="مثال: تعاون مع فلان" value="${escapeHtml(existingLabel)}" maxlength="100" style="width:100%;">
+      </div>
+      <button class="btn" id="saveCampaignBtn">حفظ</button>
+    </div>
+    <div id="campaignFormMsg" style="margin-top:10px; font-size:0.85rem;"></div>
+  `;
+}
+
+function bindCampaignFormEvents(acc) {
+  document.getElementById('saveCampaignBtn').addEventListener('click', async () => {
+    const dateVal = document.getElementById('campaignDateInput').value;
+    const labelVal = document.getElementById('campaignLabelInput').value;
+    const msgEl = document.getElementById('campaignFormMsg');
+
+    if (!dateVal) {
+      msgEl.style.color = '#DC2626';
+      msgEl.textContent = 'اختر تاريخ أول.';
+      return;
+    }
+
+    msgEl.style.color = 'var(--text-muted)';
+    msgEl.textContent = 'جاري الحفظ…';
+
+    try {
+      const res = await fetch('/.netlify/functions/set-campaign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ open_id: acc.open_id, campaign_date: dateVal, campaign_label: labelVal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'تعذر الحفظ');
+
+      acc.campaign = data.campaign;
+      renderCampaignCard(acc);
+    } catch (err) {
+      msgEl.style.color = '#DC2626';
+      msgEl.textContent = err.message || 'حدث خطأ، حاول مرة ثانية.';
+    }
+  });
+}
+
+function renderCampaignComparison(acc, videos) {
+  const campaignDate = new Date(acc.campaign.date);
+  const before = videos.filter((v) => new Date(v.create_time) < campaignDate);
+  const after = videos.filter((v) => new Date(v.create_time) >= campaignDate);
+
+  const metrics = [
+    { key: 'view_count', label: 'متوسط المشاهدات' },
+    { key: 'like_count', label: 'متوسط الإعجابات' },
+    { key: 'comment_count', label: 'متوسط التعليقات' },
+    { key: 'share_count', label: 'متوسط المشاركات' },
+  ];
+
+  const cells = metrics.map((m) => {
+    const avgBefore = average(before, m.key);
+    const avgAfter = average(after, m.key);
+    const change = pctChange(avgBefore, avgAfter);
+    const cls = change > 0.5 ? 'change-up' : change < -0.5 ? 'change-down' : 'change-flat';
+    const arrow = change > 0.5 ? '▲' : change < -0.5 ? '▼' : '—';
+    const changeText = isFinite(change) ? `${arrow} ${Math.abs(change).toFixed(0)}%` : '—';
+    return `
+      <div class="compare-cell">
+        <div class="metric-name">${m.label}</div>
+        <div class="metric-values">
+          <span>${fmt(avgBefore)}</span>
+          <span style="color:var(--text-muted); font-weight:400;">←</span>
+          <span>${fmt(avgAfter)}</span>
+        </div>
+        <div class="arrow ${cls}" style="margin-top:4px;">${changeText}</div>
+      </div>`;
+  }).join('');
+
+  const label = acc.campaign.label ? `${escapeHtml(acc.campaign.label)} — ` : '';
+  const dateStr = campaignDate.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  return `
+    <div class="campaign-active">
+      <div>
+        <h2 style="margin-bottom:6px;">📌 مقارنة الأداء: قبل/بعد</h2>
+        <span class="campaign-badge">${label}${dateStr}</span>
+      </div>
+      <button class="link-btn" id="editCampaignBtn">تعديل التاريخ</button>
+    </div>
+    ${
+      before.length === 0 || after.length === 0
+        ? `<p class="compare-note">نحتاج فيديوهات قبل وبعد هذا التاريخ عشان نقدر نقارن (حاليًا: ${before.length} قبل، ${after.length} بعد).</p>`
+        : `
+      <div class="compare-grid">${cells}</div>
+      <p class="compare-note">مقارنة بين متوسط أداء ${before.length} فيديو قبل التاريخ، و ${after.length} فيديو بعده.</p>`
+    }
+  `;
+}
+
+function average(arr, key) {
+  if (!arr.length) return 0;
+  return sum(arr, key) / arr.length;
+}
+function pctChange(before, after) {
+  if (before === 0) return after === 0 ? 0 : Infinity;
+  return ((after - before) / before) * 100;
+}
+
+/* ========== CHARTS ========== */
+
+function drawCharts(videos) {
+  if (viewsChart) viewsChart.destroy();
+  if (engagementChart) engagementChart.destroy();
+
+  const colors = loadColors();
+
+  const labels = videos.map((v, i) => `فيديو ${i + 1}`);
+  const views = videos.map((v) => v.view_count || 0);
+  const likes = videos.map((v) => v.like_count || 0);
+  const totalLikes = sum(videos, 'like_count');
+  const totalComments = sum(videos, 'comment_count');
+  const totalShares = sum(videos, 'share_count');
+
+  Chart.defaults.font.family = "'Segoe UI', Tahoma, Arial, sans-serif";
+  Chart.defaults.color = '#64748B';
+
+  document.getElementById('viewsLegend').innerHTML = `
+    <span class="legend-item"><i style="background:${colors.views}"></i>مشاهدات</span>
+    <span class="legend-item"><i style="background:${colors.likes}"></i>إعجابات</span>
+  `;
+
+  viewsChart = new Chart(document.getElementById('viewsChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'مشاهدات', data: views, backgroundColor: colors.views, borderRadius: 4, maxBarThickness: 34, yAxisID: 'yViews' },
+        { label: 'إعجابات', data: likes, backgroundColor: colors.likes, borderRadius: 4, maxBarThickness: 34, yAxisID: 'yLikes' },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#64748B', font: { size: 11 } } },
+        yViews: {
+          type: 'linear', position: 'right',
+          grid: { color: '#EEF1F6' }, border: { display: false },
+          ticks: { color: colors.views },
+          title: { display: true, text: 'مشاهدات', color: colors.views, font: { size: 11 } },
+        },
+        yLikes: {
+          type: 'linear', position: 'left',
+          grid: { display: false }, border: { display: false },
+          ticks: { color: colors.likes },
+          title: { display: true, text: 'إعجابات', color: colors.likes, font: { size: 11 } },
+        },
+      },
+    },
+  });
+
+  const engagementLabels = ['إعجابات', 'تعليقات', 'مشاركات'];
+  const engagementTotals = [totalLikes, totalComments, totalShares];
+  const engagementColors = [colors.views, colors.likes, colors.shares];
+  const engagementTotal = engagementTotals.reduce((a, b) => a + b, 0) || 1;
+
+  engagementChart = new Chart(document.getElementById('engagementChart'), {
+    type: 'doughnut',
+    data: { labels: engagementLabels, datasets: [{ data: engagementTotals, backgroundColor: engagementColors, borderWidth: 0 }] },
+    options: { responsive: true, cutout: '62%', plugins: { legend: { display: false } } },
+  });
+
+  const legendEl = document.getElementById('engagementLegend');
+  legendEl.innerHTML = '';
+  engagementLabels.forEach((label, i) => {
+    const pct = ((engagementTotals[i] / engagementTotal) * 100).toFixed(1);
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="dot" style="background:${engagementColors[i]}"></span><span class="legend-label">${label}</span><span class="legend-pct">${pct}%</span>`;
+    legendEl.appendChild(li);
+  });
+}
+
+/* ========== COLOR CUSTOMIZATION PANEL ========== */
+
+function initColorPanel() {
+  const panel = document.getElementById('colorPanel');
+  const overlay = document.getElementById('overlay');
+  const colors = loadColors();
+
+  document.getElementById('colorViews').value = colors.views;
+  document.getElementById('colorLikes').value = colors.likes;
+  document.getElementById('colorShares').value = colors.shares;
+
+  function openPanel() { panel.classList.add('open'); overlay.classList.add('open'); }
+  function closePanel() { panel.classList.remove('open'); overlay.classList.remove('open'); }
+
+  document.getElementById('openColorsBtn').addEventListener('click', openPanel);
+  overlay.addEventListener('click', closePanel);
+
+  document.getElementById('applyColorsBtn').addEventListener('click', () => {
+    const newColors = {
+      views: document.getElementById('colorViews').value,
+      likes: document.getElementById('colorLikes').value,
+      shares: document.getElementById('colorShares').value,
+    };
+    saveColors(newColors);
+    if (currentOpenId) render(currentOpenId);
+    closePanel();
+  });
+
+  document.getElementById('resetColorsBtn').addEventListener('click', () => {
+    saveColors(DEFAULT_COLORS);
+    document.getElementById('colorViews').value = DEFAULT_COLORS.views;
+    document.getElementById('colorLikes').value = DEFAULT_COLORS.likes;
+    document.getElementById('colorShares').value = DEFAULT_COLORS.shares;
+    if (currentOpenId) render(currentOpenId);
+  });
+}
+
+function sum(arr, key) { return arr.reduce((s, a) => s + (a[key] || 0), 0); }
+function fmt(n) { return Math.round(n || 0).toLocaleString('en-US'); }
+function escapeHtml(str) { return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function escapeAttr(str) { return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+init();
+</script>
+
+</body>
+</html>
