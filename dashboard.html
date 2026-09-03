@@ -479,13 +479,14 @@ function renderRefCompareModeAndResult(sorted) {
     emptyNote = `ما فيه فيديوهات كافية بيوم قبل أو بعد هذا الفيديو (حاليًا: ${before.length} قبل، ${after.length} بعد).`;
   }
 
-  resultEl.innerHTML = buildComparisonHTML(before, after, { note, emptyNote });
+  resultEl.innerHTML = buildComparisonHTML(before, after, { note, emptyNote, secondaryMode: 'total' });
 }
 
 /* ========== SHARED COMPARISON RENDERING (total views + secondary metrics) ========== */
 
 function buildComparisonHTML(before, after, opts) {
   opts = opts || {};
+  const secondaryMode = opts.secondaryMode === 'total' ? 'total' : 'avg'; // 'avg' | 'total'
   if (before.length === 0 || after.length === 0) {
     return `<p class="compare-note">${opts.emptyNote || `نحتاج فيديوهات في الفترتين عشان نقدر نقارن (حاليًا: ${before.length} قبل، ${after.length} بعد).`}</p>`;
   }
@@ -497,16 +498,22 @@ function buildComparisonHTML(before, after, opts) {
   const viewsArrow = viewsChange > 0.5 ? '▲' : viewsChange < -0.5 ? '▼' : '—';
   const viewsChangeText = isFinite(viewsChange) ? `${viewsArrow} ${Math.abs(viewsChange).toFixed(0)}%` : '—';
 
-  const secondaryMetrics = [
-    { key: 'like_count', label: 'متوسط الإعجابات' },
-    { key: 'comment_count', label: 'متوسط التعليقات' },
-    { key: 'share_count', label: 'متوسط المشاركات' },
-  ];
+  const secondaryMetrics = secondaryMode === 'total'
+    ? [
+        { key: 'like_count', label: 'إجمالي الإعجابات' },
+        { key: 'comment_count', label: 'إجمالي التعليقات' },
+        { key: 'share_count', label: 'إجمالي المشاركات' },
+      ]
+    : [
+        { key: 'like_count', label: 'متوسط الإعجابات' },
+        { key: 'comment_count', label: 'متوسط التعليقات' },
+        { key: 'share_count', label: 'متوسط المشاركات' },
+      ];
 
   const cells = secondaryMetrics.map((m) => {
-    const avgBefore = average(before, m.key);
-    const avgAfter = average(after, m.key);
-    const change = pctChange(avgBefore, avgAfter);
+    const valBefore = secondaryMode === 'total' ? sum(before, m.key) : average(before, m.key);
+    const valAfter = secondaryMode === 'total' ? sum(after, m.key) : average(after, m.key);
+    const change = pctChange(valBefore, valAfter);
     const cls = change > 0.5 ? 'change-up' : change < -0.5 ? 'change-down' : 'change-flat';
     const arrow = change > 0.5 ? '▲' : change < -0.5 ? '▼' : '—';
     const changeText = isFinite(change) ? `${arrow} ${Math.abs(change).toFixed(0)}%` : '—';
@@ -514,9 +521,9 @@ function buildComparisonHTML(before, after, opts) {
       <div class="compare-cell">
         <div class="metric-name">${m.label}</div>
         <div class="metric-values">
-          <span>${fmt(avgBefore)}</span>
+          <span>${fmt(valBefore)}</span>
           <span style="color:var(--text-muted); font-weight:400;">←</span>
-          <span>${fmt(avgAfter)}</span>
+          <span>${fmt(valAfter)}</span>
         </div>
         <div class="arrow ${cls}" style="margin-top:4px;">${changeText}</div>
       </div>`;
