@@ -91,7 +91,18 @@
   .change-flat { color: var(--text-muted); }
   .compare-note { font-size: 0.78rem; color: var(--text-muted); margin-top: 10px; }
   .link-btn { background: none; border: none; color: var(--accent); font-family: inherit; font-size: 0.85rem; cursor: pointer; text-decoration: underline; padding: 0; }
- 
+
+  .compare-tabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .compare-tab { background: none; border: none; font-family: inherit; font-size: 0.88rem; padding: 10px 6px; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .compare-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+  .compare-tab:hover:not(.active) { color: var(--text); }
+
+  .total-views-hero { background: linear-gradient(135deg, #EEF2FF, #F4F6FB); border: 1px solid var(--border); border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 16px; }
+  .total-views-hero .hero-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; }
+  .total-views-hero .hero-values { display: flex; justify-content: center; align-items: baseline; gap: 10px; font-size: 2.1rem; font-weight: 800; color: var(--accent); }
+  .total-views-hero .hero-arrow { font-size: 1rem; font-weight: 700; margin-top: 6px; }
+  @media (max-width: 480px) { .total-views-hero .hero-values { font-size: 1.5rem; } }
+
   /* ===== Color customization panel ===== */
   .color-panel {
     position: fixed; top: 0; left: 0; height: 100vh; width: 280px; background: #fff;
@@ -198,6 +209,7 @@ async function init() {
 function render(openId) {
   const acc = allAccounts.find((a) => a.open_id === openId);
   if (!acc) return;
+  if (currentOpenId !== openId) refVideoId = null;
   currentOpenId = openId;
  
   const pill = document.getElementById('statusPill');
@@ -249,20 +261,49 @@ function render(openId) {
   renderCampaignCard(acc);
 }
  
-/* ========== CAMPAIGN BEFORE/AFTER COMPARISON ========== */
- 
+/* ========== PERFORMANCE COMPARISON (before/after) ========== */
+
+let campaignSelectionMode = 'date'; // 'date' | 'video'
+let refVideoId = null;
+let refCompareBasis = 'video'; // 'video' | 'day'
+
 function renderCampaignCard(acc) {
   const el = document.getElementById('campaignCard');
   const videos = (acc.videos || []).filter((v) => v.create_time);
- 
+
+  el.innerHTML = `
+    <div class="compare-tabs">
+      <button class="compare-tab ${campaignSelectionMode === 'date' ? 'active' : ''}" data-mode="date">📅 تاريخ يدوي</button>
+      <button class="compare-tab ${campaignSelectionMode === 'video' ? 'active' : ''}" data-mode="video">🎬 فيديو مرجعي</button>
+    </div>
+    <div id="compareBody"></div>
+  `;
+
+  el.querySelectorAll('.compare-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (campaignSelectionMode === btn.dataset.mode) return;
+      campaignSelectionMode = btn.dataset.mode;
+      renderCampaignCard(acc);
+    });
+  });
+
+  if (campaignSelectionMode === 'date') {
+    renderDateCampaignBody(acc, videos);
+  } else {
+    renderVideoCampaignBody(acc, videos);
+  }
+}
+
+function renderDateCampaignBody(acc, videos) {
+  const body = document.getElementById('compareBody');
   if (acc.campaign && acc.campaign.date) {
-    el.innerHTML = renderCampaignComparison(acc, videos);
+    body.innerHTML = renderCampaignComparison(acc, videos);
     document.getElementById('editCampaignBtn')?.addEventListener('click', () => {
-      el.innerHTML = renderCampaignForm(acc);
+      body.innerHTML = renderCampaignForm(acc);
       bindCampaignFormEvents(acc);
     });
   } else {
-    el.innerHTML = renderCampaignForm(acc);
+    body.innerHTML = renderCampaignForm(acc);
     bindCampaignFormEvents(acc);
   }
 }
@@ -326,15 +367,143 @@ function renderCampaignComparison(acc, videos) {
   const campaignDate = new Date(acc.campaign.date);
   const before = videos.filter((v) => new Date(v.create_time) < campaignDate);
   const after = videos.filter((v) => new Date(v.create_time) >= campaignDate);
- 
-  const metrics = [
-    { key: 'view_count', label: 'متوسط المشاهدات' },
+
+  const label = acc.campaign.label ? `${escapeHtml(acc.campaign.label)} — ` : '';
+  const dateStr = campaignDate.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  return `
+    <div class="campaign-active">
+      <div>
+        <h2 style="margin-bottom:6px;">📌 مقارنة الأداء: قبل/بعد</h2>
+        <span class="campaign-badge">${label}${dateStr}</span>
+      </div>
+      <button class="link-btn" id="editCampaignBtn">تعديل التاريخ</button>
+    </div>
+    ${buildComparisonHTML(before, after, {
+      emptyNote: `نحتاج فيديوهات قبل وبعد هذا التاريخ عشان نقدر نقارن (حاليًا: ${before.length} قبل، ${after.length} بعد).`,
+      note: `مقارنة بين ${before.length} فيديو قبل التاريخ، و ${after.length} فيديو بعده.`,
+    })}
+  `;
+}
+
+/* ========== REFERENCE-VIDEO BASED COMPARISON ========== */
+
+function renderVideoCampaignBody(acc, videos) {
+  const body = document.getElementById('compareBody');
+
+  if (videos.length < 2) {
+    body.innerHTML = `
+      <h2>🎬 مقارنة بفيديو مرجعي (إعلان / تعاون)</h2>
+      <p class="compare-note" style="margin-top:10px;">نحتاج فيديوهين على الأقل بهذا الحساب عشان نقدر نستخدم هذي الطريقة.</p>
+    `;
+    return;
+  }
+
+  const sorted = [...videos].sort((a, b) => new Date(a.create_time) - new Date(b.create_time));
+  const options = sorted.slice().reverse().map((v) => {
+    const title = (v.title || '').trim();
+    const label = title || `فيديو بدون عنوان (${new Date(v.create_time).toLocaleDateString('ar-SA')})`;
+    return `<option value="${escapeAttr(v.id)}" ${v.id === refVideoId ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+  }).join('');
+
+  body.innerHTML = `
+    <h2>🎬 مقارنة بفيديو مرجعي (إعلان / تعاون)</h2>
+    <p class="compare-note" style="margin-bottom:14px;">اختر فيديو الإعلان أو التعاون مع المؤثر، ثم اختر طريقة المقارنة.</p>
+    <div class="campaign-form" style="margin-bottom:14px;">
+      <div class="field" style="flex:1; min-width:220px;">
+        <label>الفيديو المرجعي</label>
+        <select id="refVideoSelect">
+          <option value="">— اختر فيديو —</option>
+          ${options}
+        </select>
+      </div>
+    </div>
+    <div id="refCompareModeRow"></div>
+    <div id="refCompareResult"></div>
+  `;
+
+  document.getElementById('refVideoSelect').addEventListener('change', (e) => {
+    refVideoId = e.target.value || null;
+    renderRefCompareModeAndResult(sorted);
+  });
+
+  renderRefCompareModeAndResult(sorted);
+}
+
+function renderRefCompareModeAndResult(sorted) {
+  const modeRow = document.getElementById('refCompareModeRow');
+  const resultEl = document.getElementById('refCompareResult');
+
+  if (!refVideoId) {
+    modeRow.innerHTML = '';
+    resultEl.innerHTML = '';
+    return;
+  }
+
+  const refIndex = sorted.findIndex((v) => v.id === refVideoId);
+  const refVideo = refIndex >= 0 ? sorted[refIndex] : null;
+  if (!refVideo) {
+    modeRow.innerHTML = '';
+    resultEl.innerHTML = '';
+    return;
+  }
+
+  modeRow.innerHTML = `
+    <div class="compare-tabs" style="margin-bottom:14px;">
+      <button class="compare-tab ${refCompareBasis === 'video' ? 'active' : ''}" data-basis="video">🎬 مقارنة بالفيديو</button>
+      <button class="compare-tab ${refCompareBasis === 'day' ? 'active' : ''}" data-basis="day">📆 مقارنة باليوم</button>
+    </div>
+  `;
+  modeRow.querySelectorAll('.compare-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (refCompareBasis === btn.dataset.basis) return;
+      refCompareBasis = btn.dataset.basis;
+      renderRefCompareModeAndResult(sorted);
+    });
+  });
+
+  const refTitle = (refVideo.title || '').trim() || 'الفيديو المختار';
+  let before, after, note, emptyNote;
+
+  if (refCompareBasis === 'video') {
+    before = refIndex > 0 ? [sorted[refIndex - 1]] : [];
+    after = refIndex < sorted.length - 1 ? [sorted[refIndex + 1]] : [];
+    note = `مقارنة بين الفيديو المنشور مباشرة قبل «${escapeHtml(refTitle)}»، والفيديو المنشور مباشرة بعده.`;
+    emptyNote = 'نحتاج فيديو منشور قبل الفيديو المرجعي وفيديو منشور بعده عشان نقدر نقارن.';
+  } else {
+    const refTime = new Date(refVideo.create_time).getTime();
+    const oneDay = 24 * 60 * 60 * 1000;
+    before = sorted.filter((v) => v.id !== refVideo.id && new Date(v.create_time).getTime() >= refTime - oneDay && new Date(v.create_time).getTime() < refTime);
+    after = sorted.filter((v) => v.id !== refVideo.id && new Date(v.create_time).getTime() > refTime && new Date(v.create_time).getTime() <= refTime + oneDay);
+    note = `مقارنة بين فيديوهات يوم قبل نشر «${escapeHtml(refTitle)}»، وفيديوهات يوم بعده.`;
+    emptyNote = `ما فيه فيديوهات كافية بيوم قبل أو بعد هذا الفيديو (حاليًا: ${before.length} قبل، ${after.length} بعد).`;
+  }
+
+  resultEl.innerHTML = buildComparisonHTML(before, after, { note, emptyNote });
+}
+
+/* ========== SHARED COMPARISON RENDERING (total views + secondary metrics) ========== */
+
+function buildComparisonHTML(before, after, opts) {
+  opts = opts || {};
+  if (before.length === 0 || after.length === 0) {
+    return `<p class="compare-note">${opts.emptyNote || `نحتاج فيديوهات في الفترتين عشان نقدر نقارن (حاليًا: ${before.length} قبل، ${after.length} بعد).`}</p>`;
+  }
+
+  const totalViewsBefore = sum(before, 'view_count');
+  const totalViewsAfter = sum(after, 'view_count');
+  const viewsChange = pctChange(totalViewsBefore, totalViewsAfter);
+  const viewsCls = viewsChange > 0.5 ? 'change-up' : viewsChange < -0.5 ? 'change-down' : 'change-flat';
+  const viewsArrow = viewsChange > 0.5 ? '▲' : viewsChange < -0.5 ? '▼' : '—';
+  const viewsChangeText = isFinite(viewsChange) ? `${viewsArrow} ${Math.abs(viewsChange).toFixed(0)}%` : '—';
+
+  const secondaryMetrics = [
     { key: 'like_count', label: 'متوسط الإعجابات' },
     { key: 'comment_count', label: 'متوسط التعليقات' },
     { key: 'share_count', label: 'متوسط المشاركات' },
   ];
- 
-  const cells = metrics.map((m) => {
+
+  const cells = secondaryMetrics.map((m) => {
     const avgBefore = average(before, m.key);
     const avgAfter = average(after, m.key);
     const change = pctChange(avgBefore, avgAfter);
@@ -352,28 +521,22 @@ function renderCampaignComparison(acc, videos) {
         <div class="arrow ${cls}" style="margin-top:4px;">${changeText}</div>
       </div>`;
   }).join('');
- 
-  const label = acc.campaign.label ? `${escapeHtml(acc.campaign.label)} — ` : '';
-  const dateStr = campaignDate.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
- 
+
   return `
-    <div class="campaign-active">
-      <div>
-        <h2 style="margin-bottom:6px;">📌 مقارنة الأداء: قبل/بعد</h2>
-        <span class="campaign-badge">${label}${dateStr}</span>
+    <div class="total-views-hero">
+      <div class="hero-label">📊 إجمالي المشاهدات (المقياس الرئيسي)</div>
+      <div class="hero-values">
+        <span>${fmt(totalViewsBefore)}</span>
+        <span style="color:var(--text-muted); font-weight:400; font-size:1.2rem;">←</span>
+        <span>${fmt(totalViewsAfter)}</span>
       </div>
-      <button class="link-btn" id="editCampaignBtn">تعديل التاريخ</button>
+      <div class="hero-arrow ${viewsCls}">${viewsChangeText}</div>
     </div>
-    ${
-      before.length === 0 || after.length === 0
-        ? `<p class="compare-note">نحتاج فيديوهات قبل وبعد هذا التاريخ عشان نقدر نقارن (حاليًا: ${before.length} قبل، ${after.length} بعد).</p>`
-        : `
-      <div class="compare-grid">${cells}</div>
-      <p class="compare-note">مقارنة بين متوسط أداء ${before.length} فيديو قبل التاريخ، و ${after.length} فيديو بعده.</p>`
-    }
+    <div class="compare-grid">${cells}</div>
+    <p class="compare-note">${opts.note || `مقارنة بين ${before.length} فيديو قبل، و ${after.length} فيديو بعد.`}</p>
   `;
 }
- 
+
 function average(arr, key) {
   if (!arr.length) return 0;
   return sum(arr, key) / arr.length;
