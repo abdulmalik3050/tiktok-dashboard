@@ -463,13 +463,14 @@ function renderRefCompareModeAndResult(sorted) {
   });
 
   const refTitle = (refVideo.title || '').trim() || 'الفيديو المختار';
-  let before, after, note, emptyNote;
+  let before, after, note, emptyNote, secondaryMode;
 
   if (refCompareBasis === 'video') {
     before = refIndex > 0 ? [sorted[refIndex - 1]] : [];
     after = refIndex < sorted.length - 1 ? [sorted[refIndex + 1]] : [];
     note = `مقارنة بين الفيديو المنشور مباشرة قبل «${escapeHtml(refTitle)}»، والفيديو المنشور مباشرة بعده.`;
     emptyNote = 'نحتاج فيديو منشور قبل الفيديو المرجعي وفيديو منشور بعده عشان نقدر نقارن.';
+    secondaryMode = 'exact'; // فيديو واحد مقابل فيديو واحد: الأرقام الفعلية، بدون متوسط أو تجميع
   } else {
     const refTime = new Date(refVideo.create_time).getTime();
     const oneDay = 24 * 60 * 60 * 1000;
@@ -477,16 +478,19 @@ function renderRefCompareModeAndResult(sorted) {
     after = sorted.filter((v) => v.id !== refVideo.id && new Date(v.create_time).getTime() > refTime && new Date(v.create_time).getTime() <= refTime + oneDay);
     note = `مقارنة بين فيديوهات يوم قبل نشر «${escapeHtml(refTitle)}»، وفيديوهات يوم بعده.`;
     emptyNote = `ما فيه فيديوهات كافية بيوم قبل أو بعد هذا الفيديو (حاليًا: ${before.length} قبل، ${after.length} بعد).`;
+    secondaryMode = 'total'; // عدة فيديوهات باليوم: إجمالي مجموعها
   }
 
-  resultEl.innerHTML = buildComparisonHTML(before, after, { note, emptyNote, secondaryMode: 'total' });
+  resultEl.innerHTML = buildComparisonHTML(before, after, { note, emptyNote, secondaryMode });
 }
 
 /* ========== SHARED COMPARISON RENDERING (total views + secondary metrics) ========== */
 
 function buildComparisonHTML(before, after, opts) {
   opts = opts || {};
-  const secondaryMode = opts.secondaryMode === 'total' ? 'total' : 'avg'; // 'avg' | 'total'
+  // 'avg' = متوسط عدة فيديوهات (تاريخ يدوي) | 'total' = إجمالي عدة فيديوهات (مقارنة باليوم) | 'exact' = الرقم الفعلي لفيديو واحد (مقارنة بالفيديو)
+  const validModes = ['avg', 'total', 'exact'];
+  const secondaryMode = validModes.includes(opts.secondaryMode) ? opts.secondaryMode : 'avg';
   if (before.length === 0 || after.length === 0) {
     return `<p class="compare-note">${opts.emptyNote || `نحتاج فيديوهات في الفترتين عشان نقدر نقارن (حاليًا: ${before.length} قبل، ${after.length} بعد).`}</p>`;
   }
@@ -498,21 +502,22 @@ function buildComparisonHTML(before, after, opts) {
   const viewsArrow = viewsChange > 0.5 ? '▲' : viewsChange < -0.5 ? '▼' : '—';
   const viewsChangeText = isFinite(viewsChange) ? `${viewsArrow} ${Math.abs(viewsChange).toFixed(0)}%` : '—';
 
-  const secondaryMetrics = secondaryMode === 'total'
-    ? [
-        { key: 'like_count', label: 'إجمالي الإعجابات' },
-        { key: 'comment_count', label: 'إجمالي التعليقات' },
-        { key: 'share_count', label: 'إجمالي المشاركات' },
-      ]
-    : [
-        { key: 'like_count', label: 'متوسط الإعجابات' },
-        { key: 'comment_count', label: 'متوسط التعليقات' },
-        { key: 'share_count', label: 'متوسط المشاركات' },
-      ];
+  const secondaryLabels = {
+    total: { like_count: 'إجمالي الإعجابات', comment_count: 'إجمالي التعليقات', share_count: 'إجمالي المشاركات' },
+    exact: { like_count: 'عدد الإعجابات', comment_count: 'عدد التعليقات', share_count: 'عدد المشاركات' },
+    avg: { like_count: 'متوسط الإعجابات', comment_count: 'متوسط التعليقات', share_count: 'متوسط المشاركات' },
+  }[secondaryMode];
+
+  const secondaryMetrics = [
+    { key: 'like_count', label: secondaryLabels.like_count },
+    { key: 'comment_count', label: secondaryLabels.comment_count },
+    { key: 'share_count', label: secondaryLabels.share_count },
+  ];
 
   const cells = secondaryMetrics.map((m) => {
-    const valBefore = secondaryMode === 'total' ? sum(before, m.key) : average(before, m.key);
-    const valAfter = secondaryMode === 'total' ? sum(after, m.key) : average(after, m.key);
+    // 'total' و 'exact' كلاهما مجموع فعلي (لا متوسط) — الفرق تسمية فقط حسب عدد الفيديوهات بكل جهة
+    const valBefore = secondaryMode === 'avg' ? average(before, m.key) : sum(before, m.key);
+    const valAfter = secondaryMode === 'avg' ? average(after, m.key) : sum(after, m.key);
     const change = pctChange(valBefore, valAfter);
     const cls = change > 0.5 ? 'change-up' : change < -0.5 ? 'change-down' : 'change-flat';
     const arrow = change > 0.5 ? '▲' : change < -0.5 ? '▼' : '—';
