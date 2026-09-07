@@ -267,9 +267,34 @@ let campaignSelectionMode = 'date'; // 'date' | 'video'
 let refVideoId = null;
 let refCompareBasis = 'video'; // 'video' | 'day'
 
+// يبني قائمة الفيديوهات الصالحة للترتيب الزمني من acc.videos الخام،
+// ويستبعد أي فيديو بدون تاريخ نشر صالح (create_time مفقود أو لا يتحول
+// لتاريخ صحيح) أو مكرر بنفس معرف الفيديو (id) — لأن أي فيديو ناقص أو
+// مكرر بالمصفوفة يزيح موقع الفهرسة (index) لكل الفيديوهات اللي بعده،
+// فيخلي حساب "قبل/بعد" يتخطى الفيديو الصحيح بدون أي خطأ ظاهر بالكود.
+function getValidVideosForComparison(acc) {
+  const rawVideos = acc.videos || [];
+  const seenIds = new Set();
+  const videos = [];
+  const excludedVideos = [];
+
+  rawVideos.forEach((v) => {
+    const t = v.create_time ? new Date(v.create_time).getTime() : NaN;
+    const isDuplicate = v.id && seenIds.has(v.id);
+    if (!v.create_time || isNaN(t) || isDuplicate) {
+      excludedVideos.push(v);
+      return;
+    }
+    if (v.id) seenIds.add(v.id);
+    videos.push(v);
+  });
+
+  return { videos, excludedVideos };
+}
+
 function renderCampaignCard(acc) {
   const el = document.getElementById('campaignCard');
-  const videos = (acc.videos || []).filter((v) => v.create_time);
+  const { videos, excludedVideos } = getValidVideosForComparison(acc);
 
   el.innerHTML = `
     <div class="compare-tabs">
@@ -290,7 +315,7 @@ function renderCampaignCard(acc) {
   if (campaignSelectionMode === 'date') {
     renderDateCampaignBody(acc, videos);
   } else {
-    renderVideoCampaignBody(acc, videos);
+    renderVideoCampaignBody(acc, videos, excludedVideos);
   }
 }
 
@@ -388,13 +413,33 @@ function renderCampaignComparison(acc, videos) {
 
 /* ========== REFERENCE-VIDEO BASED COMPARISON ========== */
 
-function renderVideoCampaignBody(acc, videos) {
+// تنبيه واضح للمستخدم بأي فيديوهات استُبعدت من ترتيب "قبل/بعد" (تاريخ
+// نشر مفقود/غير صالح، أو معرف فيديو مكرر) — عشان لو فيديو متوقّع يظهر
+// كـ"قبل" أو "بعد" ما ظهر، يعرف السبب بدل ما يبدو كخطأ بالحساب.
+function excludedVideosWarningHTML(excludedVideos) {
+  if (!excludedVideos || excludedVideos.length === 0) return '';
+  const items = excludedVideos.map((v) => {
+    const title = (v.title || '').trim() || 'فيديو بدون عنوان';
+    const reason = !v.create_time ? 'تاريخ نشر غير متوفر' : 'تاريخ نشر غير صالح أو معرف مكرر';
+    return `<li>${escapeHtml(title)} — ${reason}</li>`;
+  }).join('');
+  return `
+    <div class="compare-note" style="background:#FFFBEB; color:#92400E; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
+      ⚠️ ${excludedVideos.length} فيديو ما دخل بحساب "قبل/بعد" لعدم توفر تاريخ نشر صالح:
+      <ul style="margin:6px 0 0 0; padding-inline-start:18px;">${items}</ul>
+    </div>
+  `;
+}
+
+function renderVideoCampaignBody(acc, videos, excludedVideos) {
   const body = document.getElementById('compareBody');
+  excludedVideos = excludedVideos || [];
 
   if (videos.length < 2) {
     body.innerHTML = `
       <h2>🎬 مقارنة بفيديو مرجعي (إعلان / تعاون)</h2>
       <p class="compare-note" style="margin-top:10px;">نحتاج فيديوهين على الأقل بهذا الحساب عشان نقدر نستخدم هذي الطريقة.</p>
+      ${excludedVideosWarningHTML(excludedVideos)}
     `;
     return;
   }
@@ -409,6 +454,7 @@ function renderVideoCampaignBody(acc, videos) {
   body.innerHTML = `
     <h2>🎬 مقارنة بفيديو مرجعي (إعلان / تعاون)</h2>
     <p class="compare-note" style="margin-bottom:14px;">اختر فيديو الإعلان أو التعاون مع المؤثر، ثم اختر طريقة المقارنة.</p>
+    ${excludedVideosWarningHTML(excludedVideos)}
     <div class="campaign-form" style="margin-bottom:14px;">
       <div class="field" style="flex:1; min-width:220px;">
         <label>الفيديو المرجعي</label>
