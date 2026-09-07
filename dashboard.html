@@ -664,14 +664,26 @@ function pctChange(before, after) {
 }
  
 /* ========== CHARTS ========== */
- 
+
+// عنوان مختصر لمحور الرسم البياني: أول 3 كلمات من عنوان الفيديو
+// الفعلي (نفس النص اللي يظهر بقائمة الفيديو المرجعي)، مع "..." بالنهاية
+// لو اختصرناه، عشان ما يزدحم المحور بعنوان طويل.
+function chartAxisLabel(v) {
+  const title = (v.title || '').trim();
+  if (!title) return 'فيديو بدون عنوان';
+  const words = title.split(/\s+/).slice(0, 3).join(' ');
+  const short = words.length > 22 ? words.slice(0, 22).trim() : words;
+  return short.length < title.length ? `${short}...` : short;
+}
+
 function drawCharts(videos) {
   if (viewsChart) viewsChart.destroy();
   if (engagementChart) engagementChart.destroy();
- 
+
   const colors = loadColors();
- 
-  const labels = videos.map((v, i) => `فيديو ${i + 1}`);
+
+  const labels = videos.map((v) => chartAxisLabel(v));
+  const fullTitles = videos.map((v) => (v.title || '').trim() || 'فيديو بدون عنوان');
   const views = videos.map((v) => v.view_count || 0);
   const likes = videos.map((v) => v.like_count || 0);
   const totalLikes = sum(videos, 'like_count');
@@ -697,7 +709,12 @@ function drawCharts(videos) {
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        // العنوان بالمحور مختصر لأول 3 كلمات — نعرض العنوان الكامل
+        // بالتولتيب عشان ما تضيع معلومة لو فيه اختصار.
+        tooltip: { callbacks: { title: (items) => fullTitles[items[0].dataIndex] } },
+      },
       scales: {
         x: { grid: { display: false }, ticks: { color: '#64748B', font: { size: 11 } } },
         yViews: {
