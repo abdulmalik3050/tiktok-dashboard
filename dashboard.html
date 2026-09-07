@@ -4,22 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة التحكم التفصيلية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root {
-    --bg-main: #F4F6FB;
+    /* هوية ZANJBIIL: كحلي أساسي (~60%)، برتقالي للعناصر التفاعلية (~25%)،
+       بنفسجي فاتح للتفاصيل الثانوية (~10-15%). الألوان الدلالية
+       (أخضر/أحمر لزيادة/نقصان النسب) بقيت كما هي بدون تغيير. */
+    --bg-main: #F5F5FB;
     --bg-card: #FFFFFF;
-    --accent: #3D5A80;
-    --accent2: #5B8F7F;
-    --accent3: #D9A066;
-    --text: #1E293B;
-    --text-muted: #64748B;
-    --border: #E2E8F0;
-    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.06);
+    --accent: #FF5100;
+    --accent2: #6877B1;
+    --accent3: #AEB6D8;
+    --text: #1B1C4A;
+    --text-muted: #5B5E85;
+    --border: #DFE1F0;
+    --card-shadow: 0 1px 3px rgba(27,28,74,0.05), 0 4px 14px rgba(27,28,74,0.08);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: var(--bg-main);
     color: var(--text);
     direction: rtl;
@@ -33,6 +39,8 @@
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
     position: sticky; top: 0; z-index: 100;
   }
+  .header-title-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .brand-logo { height: 30px; width: auto; display: block; }
   header h1 { font-size: 1.25rem; font-weight: 700; }
   .header-actions { display: flex; align-items: center; gap: 10px; }
   .btn { background: var(--accent); color: #fff; text-decoration: none; padding: 9px 16px; border-radius: 10px; font-size: 0.85rem; border: none; cursor: pointer; font-family: inherit; }
@@ -80,7 +88,7 @@
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field label { font-size: 0.8rem; color: var(--text-muted); }
   .campaign-active { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-  .campaign-badge { background: #EEF2FF; color: var(--accent); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+  .campaign-badge { background: #FFEDE3; color: var(--accent); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
   .compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
   .compare-cell { background: var(--bg-main); border-radius: 12px; padding: 14px 16px; text-align: center; }
   .compare-cell .metric-name { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
@@ -97,7 +105,7 @@
   .compare-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
   .compare-tab:hover:not(.active) { color: var(--text); }
 
-  .total-views-hero { background: linear-gradient(135deg, #EEF2FF, #F4F6FB); border: 1px solid var(--border); border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 16px; }
+  .total-views-hero { background: linear-gradient(135deg, #EEF0FA, #FAFAFD); border: 1px solid var(--border); border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 16px; }
   .total-views-hero .hero-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; }
   .total-views-hero .hero-values { display: flex; justify-content: center; align-items: baseline; gap: 10px; font-size: 2.1rem; font-weight: 800; color: var(--accent); }
   .total-views-hero .hero-arrow { font-size: 1rem; font-weight: 700; margin-top: 6px; }
@@ -137,7 +145,10 @@
 <body>
  
 <header>
-  <h1>📈 لوحة التحكم التفصيلية</h1>
+  <div class="header-title-group">
+    <img class="brand-logo" src="zanjbiil-logo.png" alt="ZANJBIIL" onerror="this.style.display='none'">
+    <h1>📈 لوحة التحكم التفصيلية</h1>
+  </div>
   <div class="header-actions">
     <button class="btn btn-ghost" id="openColorsBtn">🎨 تخصيص الألوان</button>
     <a class="btn" href="/accounts.html">← الحسابات المتصلة</a>
@@ -170,7 +181,7 @@ let viewsChart = null;
 let engagementChart = null;
 let currentOpenId = null;
  
-const DEFAULT_COLORS = { views: '#3D5A80', likes: '#5B8F7F', shares: '#D9A066' };
+const DEFAULT_COLORS = { views: '#FF5100', likes: '#6877B1', shares: '#AEB6D8' };
  
 function loadColors() {
   try {
@@ -690,8 +701,8 @@ function drawCharts(videos) {
   const totalComments = sum(videos, 'comment_count');
   const totalShares = sum(videos, 'share_count');
  
-  Chart.defaults.font.family = "'Segoe UI', Tahoma, Arial, sans-serif";
-  Chart.defaults.color = '#64748B';
+  Chart.defaults.font.family = "'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif";
+  Chart.defaults.color = '#5B5E85';
  
   document.getElementById('viewsLegend').innerHTML = `
     <span class="legend-item"><i style="background:${colors.views}"></i>مشاهدات</span>
@@ -716,7 +727,7 @@ function drawCharts(videos) {
         tooltip: { callbacks: { title: (items) => fullTitles[items[0].dataIndex] } },
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#64748B', font: { size: 11 } } },
+        x: { grid: { display: false }, ticks: { color: '#5B5E85', font: { size: 11 } } },
         yViews: {
           type: 'linear', position: 'right',
           grid: { color: '#EEF1F6' }, border: { display: false },
