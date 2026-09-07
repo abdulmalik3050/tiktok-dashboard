@@ -68,11 +68,22 @@
   .card h2 { font-size: 1.02rem; margin-bottom: 12px; }
   .chart-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
   .chart-head h2 { margin-bottom: 0; }
+  .chart-head-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .legend-row { display: flex; gap: 14px; }
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted); }
   .legend-item i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* مفتاح تبديل نوع الرسم: أعمدة / خطي / دائري */
+  .chart-type-toggle { display: flex; gap: 2px; background: var(--bg-main); border-radius: 8px; padding: 3px; flex-shrink: 0; }
+  .chart-type-btn { background: none; border: none; font-family: inherit; padding: 5px 9px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-muted); line-height: 1; }
+  .chart-type-btn.active { background: var(--accent); color: #fff; }
+  .chart-type-btn:hover:not(.active) { color: var(--text); }
+
   .donut-layout { display: flex; align-items: center; gap: 18px; }
   .donut-layout canvas { max-width: 230px; max-height: 230px; flex-shrink: 0; }
+  .donut-layout.wide { flex-direction: column; align-items: stretch; }
+  .donut-layout.wide canvas { max-width: 100%; max-height: 260px; width: 100%; }
+  .donut-layout.wide .donut-legend { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 16px; }
   .donut-legend { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 10px; }
   .donut-legend li { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
   .donut-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -261,13 +272,19 @@ function render(openId) {
       <div class="card">
         <div class="chart-head">
           <h2>المشاهدات والإعجابات لكل فيديو</h2>
-          <div class="legend-row" id="viewsLegend"></div>
+          <div class="chart-head-controls">
+            <div class="legend-row" id="viewsLegend"></div>
+            <div class="chart-type-toggle" id="viewsChartTypeToggle"></div>
+          </div>
         </div>
-        <canvas id="viewsChart" height="230"></canvas>
+        <div id="viewsChartWrap"><canvas id="viewsChart" height="230"></canvas></div>
       </div>
       <div class="card">
-        <h2>توزيع التفاعل</h2>
-        <div class="donut-layout">
+        <div class="chart-head">
+          <h2>توزيع التفاعل</h2>
+          <div class="chart-type-toggle" id="engagementChartTypeToggle"></div>
+        </div>
+        <div class="donut-layout" id="engagementLayout">
           <canvas id="engagementChart"></canvas>
           <ul class="donut-legend" id="engagementLegend"></ul>
         </div>
@@ -688,35 +705,115 @@ function chartAxisLabel(v) {
   return short.length < title.length ? `${short}...` : short;
 }
 
+let lastVideos = null;
+let viewsChartType = 'bar'; // 'bar' | 'line' | 'doughnut'
+let engagementChartType = 'doughnut'; // 'bar' | 'line' | 'doughnut'
+
+// مفتاح تبديل نوع الرسم (أعمدة / خطي / دائري)، مشترك بين رسمي هذي
+// الصفحة. onChange تستقبل النوع المختار وتتكفل بإعادة رسم الرسم نفسه.
+function renderChartTypeToggle(containerId, currentType, onChange) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const types = [
+    { type: 'bar', icon: '📊', title: 'أعمدة' },
+    { type: 'line', icon: '📈', title: 'خطي' },
+    { type: 'doughnut', icon: '🍩', title: 'دائري' },
+  ];
+  el.innerHTML = types
+    .map((t) => `<button class="chart-type-btn ${t.type === currentType ? 'active' : ''}" data-type="${t.type}" title="${t.title}" aria-label="${t.title}">${t.icon}</button>`)
+    .join('');
+  el.querySelectorAll('.chart-type-btn').forEach((btn) => {
+    btn.addEventListener('click', () => onChange(btn.dataset.type));
+  });
+}
+
+function handleViewsChartTypeChange(type) {
+  viewsChartType = type;
+  renderViewsChart();
+  renderChartTypeToggle('viewsChartTypeToggle', viewsChartType, handleViewsChartTypeChange);
+}
+function handleEngagementChartTypeChange(type) {
+  engagementChartType = type;
+  renderEngagementChart();
+  renderChartTypeToggle('engagementChartTypeToggle', engagementChartType, handleEngagementChartTypeChange);
+}
+
 function drawCharts(videos) {
+  lastVideos = videos;
+  Chart.defaults.font.family = "'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif";
+  Chart.defaults.color = '#5B5E85';
+
+  renderChartTypeToggle('viewsChartTypeToggle', viewsChartType, handleViewsChartTypeChange);
+  renderChartTypeToggle('engagementChartTypeToggle', engagementChartType, handleEngagementChartTypeChange);
+
+  renderViewsChart();
+  renderEngagementChart();
+}
+
+// رسم "المشاهدات والإعجابات لكل فيديو": أعمدة أو خطي بمحورين (نفس
+// البيانات والمقياسين)، أو دائري (يعرض توزيع المشاهدات فقط بين
+// الفيديوهات، لأن الدائري ما يقدر يعرض مقياسين بمحورين مختلفين).
+function renderViewsChart() {
+  if (!lastVideos) return;
   if (viewsChart) viewsChart.destroy();
-  if (engagementChart) engagementChart.destroy();
 
   const colors = loadColors();
-
+  const videos = lastVideos;
   const labels = videos.map((v) => chartAxisLabel(v));
   const fullTitles = videos.map((v) => (v.title || '').trim() || 'فيديو بدون عنوان');
   const views = videos.map((v) => v.view_count || 0);
   const likes = videos.map((v) => v.like_count || 0);
-  const totalLikes = sum(videos, 'like_count');
-  const totalComments = sum(videos, 'comment_count');
-  const totalShares = sum(videos, 'share_count');
- 
-  Chart.defaults.font.family = "'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif";
-  Chart.defaults.color = '#5B5E85';
- 
-  document.getElementById('viewsLegend').innerHTML = `
-    <span class="legend-item"><i style="background:${colors.views}"></i>مشاهدات</span>
-    <span class="legend-item"><i style="background:${colors.likes}"></i>إعجابات</span>
-  `;
- 
+
+  document.getElementById('viewsLegend').innerHTML =
+    viewsChartType === 'doughnut'
+      ? `<span class="legend-item"><i style="background:${colors.views}"></i>مشاهدات (بدون الإعجابات بهذا الوضع)</span>`
+      : `<span class="legend-item"><i style="background:${colors.views}"></i>مشاهدات</span>
+         <span class="legend-item"><i style="background:${colors.likes}"></i>إعجابات</span>`;
+
+  const wrap = document.getElementById('viewsChartWrap');
+
+  if (viewsChartType === 'doughnut') {
+    wrap.innerHTML = '<canvas id="viewsChart" height="230"></canvas>';
+    const total = views.reduce((a, b) => a + b, 0) || 1;
+    viewsChart = new Chart(document.getElementById('viewsChart'), {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: views, backgroundColor: labels.map((_, i) => shadeColor(colors.views, i)), borderWidth: 0 }] },
+      options: {
+        responsive: true,
+        cutout: '55%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => fullTitles[items[0].dataIndex],
+              label: (item) => `مشاهدات: ${fmt(item.parsed)} (${((item.parsed / total) * 100).toFixed(1)}%)`,
+            },
+          },
+        },
+      },
+    });
+    return;
+  }
+
+  wrap.innerHTML = '<canvas id="viewsChart" height="230"></canvas>';
+  const isLine = viewsChartType === 'line';
   viewsChart = new Chart(document.getElementById('viewsChart'), {
-    type: 'bar',
+    type: isLine ? 'line' : 'bar',
     data: {
       labels,
       datasets: [
-        { label: 'مشاهدات', data: views, backgroundColor: colors.views, borderRadius: 4, maxBarThickness: 34, yAxisID: 'yViews' },
-        { label: 'إعجابات', data: likes, backgroundColor: colors.likes, borderRadius: 4, maxBarThickness: 34, yAxisID: 'yLikes' },
+        {
+          label: 'مشاهدات', data: views, yAxisID: 'yViews',
+          ...(isLine
+            ? { borderColor: colors.views, backgroundColor: colors.views, tension: 0.3, fill: false, pointRadius: 3 }
+            : { backgroundColor: colors.views, borderRadius: 4, maxBarThickness: 34 }),
+        },
+        {
+          label: 'إعجابات', data: likes, yAxisID: 'yLikes',
+          ...(isLine
+            ? { borderColor: colors.likes, backgroundColor: colors.likes, tension: 0.3, fill: false, pointRadius: 3 }
+            : { backgroundColor: colors.likes, borderRadius: 4, maxBarThickness: 34 }),
+        },
       ],
     },
     options: {
@@ -744,18 +841,58 @@ function drawCharts(videos) {
       },
     },
   });
- 
+}
+
+// رسم "توزيع التفاعل": دائري (افتراضي) أو أعمدة أو خطي، لنفس مجاميع
+// الإعجابات/التعليقات/المشاركات. قائمة النسب المئوية بالجانب تبقى
+// ظاهرة بكل الأنواع.
+function renderEngagementChart() {
+  if (!lastVideos) return;
+  if (engagementChart) engagementChart.destroy();
+
+  const colors = loadColors();
+  const videos = lastVideos;
   const engagementLabels = ['إعجابات', 'تعليقات', 'مشاركات'];
-  const engagementTotals = [totalLikes, totalComments, totalShares];
+  const engagementTotals = [sum(videos, 'like_count'), sum(videos, 'comment_count'), sum(videos, 'share_count')];
   const engagementColors = [colors.views, colors.likes, colors.shares];
   const engagementTotal = engagementTotals.reduce((a, b) => a + b, 0) || 1;
- 
-  engagementChart = new Chart(document.getElementById('engagementChart'), {
-    type: 'doughnut',
-    data: { labels: engagementLabels, datasets: [{ data: engagementTotals, backgroundColor: engagementColors, borderWidth: 0 }] },
-    options: { responsive: true, cutout: '62%', plugins: { legend: { display: false } } },
-  });
- 
+
+  const layoutEl = document.getElementById('engagementLayout');
+  layoutEl.classList.toggle('wide', engagementChartType !== 'doughnut');
+  layoutEl.innerHTML = '<canvas id="engagementChart"></canvas><ul class="donut-legend" id="engagementLegend"></ul>';
+
+  if (engagementChartType === 'doughnut') {
+    engagementChart = new Chart(document.getElementById('engagementChart'), {
+      type: 'doughnut',
+      data: { labels: engagementLabels, datasets: [{ data: engagementTotals, backgroundColor: engagementColors, borderWidth: 0 }] },
+      options: { responsive: true, cutout: '62%', plugins: { legend: { display: false } } },
+    });
+  } else {
+    const isLine = engagementChartType === 'line';
+    engagementChart = new Chart(document.getElementById('engagementChart'), {
+      type: isLine ? 'line' : 'bar',
+      data: {
+        labels: engagementLabels,
+        datasets: [
+          {
+            label: 'الإجمالي', data: engagementTotals,
+            ...(isLine
+              ? { borderColor: colors.views, backgroundColor: engagementColors, tension: 0.3, fill: false, pointRadius: 5, pointBackgroundColor: engagementColors }
+              : { backgroundColor: engagementColors, borderRadius: 4, maxBarThickness: 46 }),
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#5B5E85', font: { size: 11 } } },
+          y: { grid: { color: '#EEF1F6' }, border: { display: false }, ticks: { color: '#5B5E85' } },
+        },
+      },
+    });
+  }
+
   const legendEl = document.getElementById('engagementLegend');
   legendEl.innerHTML = '';
   engagementLabels.forEach((label, i) => {
@@ -764,6 +901,18 @@ function drawCharts(videos) {
     li.innerHTML = `<span class="dot" style="background:${engagementColors[i]}"></span><span class="legend-label">${label}</span><span class="legend-pct">${pct}%</span>`;
     legendEl.appendChild(li);
   });
+}
+
+// يولّد تدرجات لون بسيطة من لون أساسي، تُستخدم لتمييز شرائح رسم
+// المشاهدات الدائري (كل فيديو شريحة، فنحتاج ألوان مائزة بينها).
+function shadeColor(hex, index) {
+  const amount = ((index * 37) % 100) / 100; // توزيع شبه عشوائي لكن ثابت
+  const num = parseInt(hex.replace('#', ''), 16);
+  let r = (num >> 16) & 0xff;
+  let g = (num >> 8) & 0xff;
+  let b = num & 0xff;
+  const lighten = (c) => Math.round(c + (255 - c) * amount * 0.65);
+  return `rgb(${lighten(r)}, ${lighten(g)}, ${lighten(b)})`;
 }
  
 /* ========== COLOR CUSTOMIZATION PANEL ========== */
