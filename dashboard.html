@@ -430,33 +430,6 @@ function renderVideoCampaignBody(acc, videos) {
   renderRefCompareModeAndResult(sorted);
 }
 
-// يرجع الفيديو الأقرب زمنيًا قبل وبعد فيديو مرجعي معين، بالاعتماد على
-// المقارنة المباشرة لأوقات النشر الفعلية (create_time) لا على موقعه
-// (index) داخل المصفوفة المرتّبة. هذا يتجنب أي خطأ لو تكرر نفس الوقت
-// بالضبط بين فيديوهين (تعادل بالتوقيت)، اللي كان ممكن يخلي الاعتماد
-// على "الفهرس - 1 / + 1" يختار فيديو غير الأقرب فعليًا.
-function findNearestNeighbors(sorted, refVideo) {
-  const refTime = new Date(refVideo.create_time).getTime();
-  let prev = null;
-  let prevTime = -Infinity;
-  let next = null;
-  let nextTime = Infinity;
-
-  for (const v of sorted) {
-    if (v.id === refVideo.id) continue;
-    const t = new Date(v.create_time).getTime();
-    if (t < refTime && t > prevTime) {
-      prev = v;
-      prevTime = t;
-    } else if (t > refTime && t < nextTime) {
-      next = v;
-      nextTime = t;
-    }
-  }
-
-  return { prev, next };
-}
-
 function renderRefCompareModeAndResult(sorted) {
   const modeRow = document.getElementById('refCompareModeRow');
   const resultEl = document.getElementById('refCompareResult');
@@ -467,7 +440,8 @@ function renderRefCompareModeAndResult(sorted) {
     return;
   }
 
-  const refVideo = sorted.find((v) => v.id === refVideoId) || null;
+  const refIndex = sorted.findIndex((v) => v.id === refVideoId);
+  const refVideo = refIndex >= 0 ? sorted[refIndex] : null;
   if (!refVideo) {
     modeRow.innerHTML = '';
     resultEl.innerHTML = '';
@@ -492,9 +466,11 @@ function renderRefCompareModeAndResult(sorted) {
   let before, after, note, emptyNote, secondaryMode;
 
   if (refCompareBasis === 'video') {
-    const neighbors = findNearestNeighbors(sorted, refVideo);
-    before = neighbors.prev ? [neighbors.prev] : [];
-    after = neighbors.next ? [neighbors.next] : [];
+    // ترتيب زمني تصاعدي، وموقع الفيديو المرجعي (refIndex) بهذا الترتيب:
+    // "قبل" = الفيديو اللي قبله مباشرة (index - 1)، "بعد" = الفيديو اللي
+    // يليه مباشرة (index + 1) — بدون أي حساب فروقات وقت.
+    before = refIndex > 0 ? [sorted[refIndex - 1]] : [];
+    after = refIndex < sorted.length - 1 ? [sorted[refIndex + 1]] : [];
     note = `مقارنة بين الفيديو المنشور مباشرة قبل «${escapeHtml(refTitle)}»، والفيديو المنشور مباشرة بعده.`;
     emptyNote = 'نحتاج فيديو منشور قبل الفيديو المرجعي وفيديو منشور بعده عشان نقدر نقارن.';
     secondaryMode = 'exact'; // فيديو واحد مقابل فيديو واحد: الأرقام الفعلية، بدون متوسط أو تجميع
