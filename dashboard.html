@@ -103,6 +103,20 @@
   .total-views-hero .hero-arrow { font-size: 1rem; font-weight: 700; margin-top: 6px; }
   @media (max-width: 480px) { .total-views-hero .hero-values { font-size: 1.5rem; } }
 
+  /* ===== Three-point (before / reference video / after) comparison ===== */
+  .tp-row { display: flex; justify-content: center; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .tp-value { color: var(--text); }
+  .tp-value.tp-ref { color: var(--accent); font-weight: 900; font-size: 1.35em; }
+  .tp-value.tp-missing { color: var(--text-muted); font-weight: 400; }
+  .tp-arrow { color: var(--text-muted); font-weight: 400; }
+  .tp-caption-row { display: flex; justify-content: center; align-items: flex-start; gap: 10px; margin-top: 8px; font-size: 0.74rem; color: var(--text-muted); }
+  .tp-caption-row span { flex: 1; min-width: 60px; text-align: center; }
+  .tp-caption-row .tp-ref-caption { color: var(--accent); font-weight: 700; }
+  .total-views-hero .tp-row.hero-values { font-size: 1.7rem; }
+  .total-views-hero .tp-row.hero-values .tp-value.tp-ref { font-size: 1.3em; }
+  @media (max-width: 480px) { .total-views-hero .tp-row.hero-values { font-size: 1.25rem; } }
+  .compare-cell .tp-row { font-size: 1.05rem; font-weight: 700; margin-top: 4px; }
+
   /* ===== Color customization panel ===== */
   .color-panel {
     position: fixed; top: 0; left: 0; height: 100vh; width: 280px; background: #fff;
@@ -509,37 +523,81 @@ function renderRefCompareModeAndResult(sorted) {
   });
 
   const refTitle = (refVideo.title || '').trim() || 'الفيديو المختار';
-  let before, after, note, emptyNote, secondaryMode;
 
   if (refCompareBasis === 'video') {
     // ترتيب زمني تصاعدي، وموقع الفيديو المرجعي (refIndex) بهذا الترتيب:
     // "قبل" = الفيديو اللي قبله مباشرة (index - 1)، "بعد" = الفيديو اللي
-    // يليه مباشرة (index + 1) — بدون أي حساب فروقات وقت.
-    before = refIndex > 0 ? [sorted[refIndex - 1]] : [];
-    after = refIndex < sorted.length - 1 ? [sorted[refIndex + 1]] : [];
-    note = `مقارنة بين الفيديو المنشور مباشرة قبل «${escapeHtml(refTitle)}»، والفيديو المنشور مباشرة بعده.`;
-    emptyNote = 'نحتاج فيديو منشور قبل الفيديو المرجعي وفيديو منشور بعده عشان نقدر نقارن.';
-    secondaryMode = 'exact'; // فيديو واحد مقابل فيديو واحد: الأرقام الفعلية، بدون متوسط أو تجميع
-  } else {
-    const refTime = new Date(refVideo.create_time).getTime();
-    const oneDay = 24 * 60 * 60 * 1000;
-    before = sorted.filter((v) => v.id !== refVideo.id && new Date(v.create_time).getTime() >= refTime - oneDay && new Date(v.create_time).getTime() < refTime);
-    after = sorted.filter((v) => v.id !== refVideo.id && new Date(v.create_time).getTime() > refTime && new Date(v.create_time).getTime() <= refTime + oneDay);
-    note = `مقارنة بين فيديوهات يوم قبل نشر «${escapeHtml(refTitle)}»، وفيديوهات يوم بعده.`;
-    emptyNote = `ما فيه فيديوهات كافية بيوم قبل أو بعد هذا الفيديو (حاليًا: ${before.length} قبل، ${after.length} بعد).`;
-    secondaryMode = 'total'; // عدة فيديوهات باليوم: إجمالي مجموعها
+    // يليه مباشرة (index + 1) — بدون أي حساب فروقات وقت. فيديو مقابل
+    // فيديو مقابل فيديو → عرض ثلاث نقاط (قبل ← المرجعي ← بعد) بدل بطاقتين.
+    const prevVideo = refIndex > 0 ? sorted[refIndex - 1] : null;
+    const nextVideo = refIndex < sorted.length - 1 ? sorted[refIndex + 1] : null;
+    resultEl.innerHTML = buildThreePointHTML(prevVideo, refVideo, nextVideo, refTitle);
+    return;
   }
 
-  resultEl.innerHTML = buildComparisonHTML(before, after, { note, emptyNote, secondaryMode });
+  // 'day': عدة فيديوهات باليوم قبل/بعد ← إجمالي (مجموع) لكل فترة، بنفس
+  // تنسيق بطاقتي "قبل/بعد" الأصلي (سهم ▲/▼ ونسبة %).
+  const refTime = new Date(refVideo.create_time).getTime();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const before = sorted.filter((v) => v.id !== refVideo.id && new Date(v.create_time).getTime() >= refTime - oneDay && new Date(v.create_time).getTime() < refTime);
+  const after = sorted.filter((v) => v.id !== refVideo.id && new Date(v.create_time).getTime() > refTime && new Date(v.create_time).getTime() <= refTime + oneDay);
+  const note = `مقارنة بين فيديوهات يوم قبل نشر «${escapeHtml(refTitle)}»، وفيديوهات يوم بعده.`;
+  const emptyNote = `ما فيه فيديوهات كافية بيوم قبل أو بعد هذا الفيديو (حاليًا: ${before.length} قبل، ${after.length} بعد).`;
+  resultEl.innerHTML = buildComparisonHTML(before, after, { note, emptyNote, secondaryMode: 'total' });
+}
+
+// عرض "ثلاث نقاط" لوضع "مقارنة بالفيديو": الفيديو اللي قبل الفيديو
+// المرجعي مباشرة ← الفيديو المرجعي نفسه (مميّز بلون ألاكسنت وخط أكبر
+// لأنه المحور) ← الفيديو اللي بعده مباشرة. كل مقياس (المشاهدات كرقم
+// رئيسي بارز، ثم الإعجابات/التعليقات/المشاركات كمقاييس ثانوية) يعرض
+// القيم الفعلية الثلاث بدل قيمتين بس.
+function buildThreePointHTML(prevVideo, refVideo, nextVideo, refTitle) {
+  function tpRowHTML(key, extraClass) {
+    const values = [prevVideo, refVideo, nextVideo].map((v, i) => {
+      if (!v) return `<span class="tp-value tp-missing">—</span>`;
+      return `<span class="tp-value ${i === 1 ? 'tp-ref' : ''}">${fmt(v[key] || 0)}</span>`;
+    });
+    return `<div class="tp-row ${extraClass || ''}">${values.join('<span class="tp-arrow">←</span>')}</div>`;
+  }
+
+  const secondaryMetrics = [
+    { key: 'like_count', label: 'عدد الإعجابات' },
+    { key: 'comment_count', label: 'عدد التعليقات' },
+    { key: 'share_count', label: 'عدد المشاركات' },
+  ];
+  const cells = secondaryMetrics.map((m) => `
+    <div class="compare-cell">
+      <div class="metric-name">${m.label}</div>
+      ${tpRowHTML(m.key)}
+    </div>`).join('');
+
+  const missingNote = !prevVideo
+    ? ' ما فيه فيديو منشور قبل الفيديو المرجعي (هو الأقدم بالحساب).'
+    : !nextVideo
+      ? ' ما فيه فيديو منشور بعد الفيديو المرجعي (هو الأحدث بالحساب).'
+      : '';
+
+  return `
+    <div class="total-views-hero">
+      <div class="hero-label">📊 إجمالي المشاهدات (المقياس الرئيسي)</div>
+      ${tpRowHTML('view_count', 'hero-values')}
+      <div class="tp-caption-row">
+        <span>${prevVideo ? 'قبل' : '—'}</span>
+        <span class="tp-ref-caption">🎯 الفيديو المرجعي</span>
+        <span>${nextVideo ? 'بعد' : '—'}</span>
+      </div>
+    </div>
+    <div class="compare-grid">${cells}</div>
+    <p class="compare-note">مقارنة الفيديو المرجعي «${escapeHtml(refTitle)}» مع الفيديو المنشور مباشرة قبله والفيديو المنشور مباشرة بعده.${missingNote}</p>
+  `;
 }
 
 /* ========== SHARED COMPARISON RENDERING (total views + secondary metrics) ========== */
 
 function buildComparisonHTML(before, after, opts) {
   opts = opts || {};
-  // 'avg' = متوسط عدة فيديوهات (تاريخ يدوي) | 'total' = إجمالي عدة فيديوهات (مقارنة باليوم) | 'exact' = الرقم الفعلي لفيديو واحد (مقارنة بالفيديو)
-  const validModes = ['avg', 'total', 'exact'];
-  const secondaryMode = validModes.includes(opts.secondaryMode) ? opts.secondaryMode : 'avg';
+  // 'avg' = متوسط عدة فيديوهات (تاريخ يدوي) | 'total' = إجمالي عدة فيديوهات (مقارنة باليوم)
+  const secondaryMode = opts.secondaryMode === 'total' ? 'total' : 'avg';
   if (before.length === 0 || after.length === 0) {
     return `<p class="compare-note">${opts.emptyNote || `نحتاج فيديوهات في الفترتين عشان نقدر نقارن (حاليًا: ${before.length} قبل، ${after.length} بعد).`}</p>`;
   }
@@ -553,7 +611,6 @@ function buildComparisonHTML(before, after, opts) {
 
   const secondaryLabels = {
     total: { like_count: 'إجمالي الإعجابات', comment_count: 'إجمالي التعليقات', share_count: 'إجمالي المشاركات' },
-    exact: { like_count: 'عدد الإعجابات', comment_count: 'عدد التعليقات', share_count: 'عدد المشاركات' },
     avg: { like_count: 'متوسط الإعجابات', comment_count: 'متوسط التعليقات', share_count: 'متوسط المشاركات' },
   }[secondaryMode];
 
@@ -564,7 +621,6 @@ function buildComparisonHTML(before, after, opts) {
   ];
 
   const cells = secondaryMetrics.map((m) => {
-    // 'total' و 'exact' كلاهما مجموع فعلي (لا متوسط) — الفرق تسمية فقط حسب عدد الفيديوهات بكل جهة
     const valBefore = secondaryMode === 'avg' ? average(before, m.key) : sum(before, m.key);
     const valAfter = secondaryMode === 'avg' ? average(after, m.key) : sum(after, m.key);
     const change = pctChange(valBefore, valAfter);
