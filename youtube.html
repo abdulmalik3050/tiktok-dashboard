@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تحليلات يوتيوب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* نفس هوية ZANJBIIL المستخدمة بباقي صفحات الداشبورد. */
+    --bg-main: #F5F5FB;
+    --bg-card: #FFFFFF;
+    --accent: #FF5100;
+    --accent2: #6877B1;
+    --accent3: #AEB6D8;
+    --text: #1B1C4A;
+    --text-muted: #5B5E85;
+    --border: #DFE1F0;
+    --card-shadow: 0 1px 3px rgba(27,28,74,0.05), 0 4px 14px rgba(27,28,74,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-main);
+    color: var(--text);
+    direction: rtl;
+    min-height: 100vh;
+  }
+  header {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(20px);
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-title-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .brand-logo { height: 30px; width: auto; display: block; }
+  header h1 { font-size: 1.25rem; font-weight: 700; }
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+  .btn { background: var(--accent); color: #fff; text-decoration: none; padding: 9px 16px; border-radius: 10px; font-size: 0.85rem; border: none; cursor: pointer; font-family: inherit; }
+  .btn-ghost { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  .btn:disabled { opacity: 0.6; cursor: default; }
+  .container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+  .search-row { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+  .search-row input[type="text"] {
+    flex: 1; min-width: 220px; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border);
+    font-family: inherit; font-size: 0.95rem; background: #fff;
+  }
+  .search-hint { font-size: 0.78rem; color: var(--text-muted); margin-top: -14px; margin-bottom: 20px; }
+
+  .error-box { background: #FEF2F2; color: #B91C1C; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.88rem; }
+  .loading { text-align: center; padding: 60px; color: var(--text-muted); }
+  .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+  .channel-card { display: flex; align-items: center; gap: 16px; background: var(--bg-card); border-radius: 14px; box-shadow: var(--card-shadow); padding: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+  .channel-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--bg-main); }
+  .channel-meta h2 { font-size: 1.1rem; margin-bottom: 4px; }
+  .channel-meta h2 a { color: inherit; text-decoration: none; }
+  .channel-meta h2 a:hover { color: var(--accent); }
+  .channel-meta .channel-handle { color: var(--text-muted); font-size: 0.85rem; }
+
+  .kpis { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .kpi { background: var(--bg-card); border-radius: 14px; box-shadow: var(--card-shadow); padding: 18px 24px; flex: 1; min-width: 140px; text-align: center; }
+  .kpi-value { display: block; font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+  .kpi-label { font-size: 0.85rem; color: var(--text-muted); }
+
+  .card { background: var(--bg-card); border-radius: 14px; box-shadow: var(--card-shadow); padding: 20px; margin-bottom: 20px; }
+  .card h2 { font-size: 1.02rem; margin-bottom: 14px; }
+
+  .video-list { display: flex; flex-direction: column; gap: 12px; }
+  .video-row { display: flex; gap: 14px; align-items: center; padding: 10px; border-radius: 12px; background: var(--bg-main); flex-wrap: wrap; }
+  .video-thumb { width: 120px; height: 68px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--border); }
+  .video-info { flex: 1; min-width: 200px; }
+  .video-title { font-weight: 600; font-size: 0.92rem; margin-bottom: 6px; color: var(--text); text-decoration: none; display: block; }
+  .video-title:hover { color: var(--accent); }
+  .video-date { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
+  .video-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--text-muted); }
+  .video-stats strong { color: var(--text); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-title-group">
+    <img class="brand-logo" src="zanjbiil-logo.png" alt="ZANJBIIL" onerror="this.style.display='none'">
+    <h1>▶️ تحليلات يوتيوب</h1>
+  </div>
+  <div class="header-actions">
+    <a class="btn btn-ghost" href="/accounts.html">حسابات TikTok</a>
+    <a class="btn btn-ghost" href="/dashboard.html">لوحة التحكم</a>
+  </div>
+</header>
+
+<div class="container">
+  <form class="search-row" id="searchForm">
+    <input type="text" id="channelInput" placeholder="اسم القناة، أو رابطها، أو ‎@handle" autocomplete="off">
+    <button type="submit" class="btn" id="searchBtn">🔍 بحث</button>
+  </form>
+  <p class="search-hint">مثال: MrBeast ، أو ‎@MrBeast ، أو https://www.youtube.com/@MrBeast</p>
+
+  <div id="content">
+    <div class="empty-state">
+      <div class="empty-icon">▶️</div>
+      <h2>ابحث عن قناة يوتيوب</h2>
+      <p style="margin-top:8px;">اكتب اسم القناة أو رابطها أعلاه لعرض المشتركين والمشاهدات وآخر الفيديوهات.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function fmt(n) { return n == null ? '—' : Math.round(n).toLocaleString('en-US'); }
+function escapeHtml(str) { return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function escapeAttr(str) { return escapeHtml(str); }
+
+async function init() {
+  const meRes = await fetch('/.netlify/functions/auth-me', { credentials: 'same-origin' });
+  const me = await meRes.json();
+  if (!me.authenticated) { window.location.href = '/login.html'; return; }
+
+  document.getElementById('searchForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = document.getElementById('channelInput').value.trim();
+    if (!q) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('q', q);
+    window.history.replaceState({}, '', url);
+    runSearch(q);
+  });
+
+  const params = new URLSearchParams(window.location.search);
+  const initialQuery = params.get('q');
+  if (initialQuery) {
+    document.getElementById('channelInput').value = initialQuery;
+    runSearch(initialQuery);
+  }
+}
+
+async function runSearch(q) {
+  const contentEl = document.getElementById('content');
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  contentEl.innerHTML = '<div class="loading">جاري البحث…</div>';
+
+  try {
+    const res = await fetch(`/.netlify/functions/youtube-lookup?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
+    if (res.status === 401) { window.location.href = '/login.html'; return; }
+    const data = await res.json();
+
+    if (!res.ok) {
+      contentEl.innerHTML = `<div class="error-box">⚠️ ${escapeHtml(data.error || 'صار خطأ غير متوقع.')}</div>`;
+      return;
+    }
+    render(data);
+  } catch (err) {
+    contentEl.innerHTML = '<div class="error-box">⚠️ تعذر الاتصال بالخادم. تحقق من اتصالك وحاول مرة ثانية.</div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function render(data) {
+  const channel = data.channel;
+  const videos = data.videos || [];
+  const contentEl = document.getElementById('content');
+
+  const handle = channel.customUrl ? (channel.customUrl.startsWith('@') ? channel.customUrl : `@${channel.customUrl}`) : '';
+  const channelUrl = handle ? `https://www.youtube.com/${handle}` : `https://www.youtube.com/channel/${channel.id}`;
+  const subsDisplay = channel.subscriber_count == null ? '🔒 مخفي' : fmt(channel.subscriber_count);
+
+  contentEl.innerHTML = `
+    <div class="channel-card">
+      ${channel.thumbnail ? `<img class="channel-avatar" src="${escapeAttr(channel.thumbnail)}" alt="">` : ''}
+      <div class="channel-meta">
+        <h2><a href="${escapeAttr(channelUrl)}" target="_blank" rel="noopener">${escapeHtml(channel.title || 'بدون اسم')}</a></h2>
+        ${handle ? `<div class="channel-handle">${escapeHtml(handle)}</div>` : ''}
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><span class="kpi-value">${subsDisplay}</span><span class="kpi-label">مشتركين</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(channel.view_count)}</span><span class="kpi-label">إجمالي المشاهدات</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(channel.video_count)}</span><span class="kpi-label">عدد الفيديوهات</span></div>
+    </div>
+    <div class="card">
+      <h2>آخر ${videos.length} فيديو</h2>
+      ${
+        videos.length
+          ? `<div class="video-list">${videos.map(videoRowHTML).join('')}</div>`
+          : `<div class="empty-state"><div class="empty-icon">🎬</div><p>ما فيه فيديوهات لعرضها بهذي القناة.</p></div>`
+      }
+    </div>
+  `;
+}
+
+function videoRowHTML(v) {
+  const dateStr = v.published_at
+    ? new Date(v.published_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '—';
+  const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}`;
+  return `
+    <div class="video-row">
+      ${v.thumbnail ? `<img class="video-thumb" src="${escapeAttr(v.thumbnail)}" alt="">` : '<div class="video-thumb"></div>'}
+      <div class="video-info">
+        <a class="video-title" href="${escapeAttr(watchUrl)}" target="_blank" rel="noopener">${escapeHtml(v.title || 'بدون عنوان')}</a>
+        <div class="video-date">📅 ${dateStr}</div>
+        <div class="video-stats">
+          <span>👁️ <strong>${fmt(v.view_count)}</strong> مشاهدة</span>
+          <span>❤️ <strong>${fmt(v.like_count)}</strong> إعجاب</span>
+          <span>💬 <strong>${fmt(v.comment_count)}</strong> تعليق</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+init();
+</script>
+
+</body>
+</html>
