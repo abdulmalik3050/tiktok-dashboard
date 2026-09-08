@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تحليلات يوتيوب</title>
+<title>تحليلات إنستقرام</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -54,6 +54,7 @@
   .search-hint { font-size: 0.78rem; color: var(--text-muted); margin-top: -14px; margin-bottom: 20px; }
 
   .error-box { background: #FEF2F2; color: #B91C1C; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.88rem; }
+  .info-box { background: #FFF7ED; color: #9A5B13; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.6; }
   .loading { text-align: center; padding: 60px; color: var(--text-muted); }
   .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
   .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
@@ -73,7 +74,7 @@
   .card { background: var(--bg-card); border-radius: 14px; box-shadow: var(--card-shadow); padding: 20px; margin-bottom: 20px; }
   .card h2 { font-size: 1.02rem; margin-bottom: 14px; }
 
-  /* ===== الرسوم البيانية (نفس أسلوب dashboard.html بالضبط) ===== */
+  /* ===== الرسوم البيانية (نفس أسلوب dashboard.html/youtube.html) ===== */
   .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
   @media (max-width: 800px) { .charts { grid-template-columns: 1fr; } }
   .chart-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
@@ -99,15 +100,14 @@
   .donut-legend .legend-label { color: var(--text); flex: 1; }
   .donut-legend .legend-pct { color: var(--text-muted); font-weight: 600; }
 
-  .video-list { display: flex; flex-direction: column; gap: 12px; }
-  .video-row { display: flex; gap: 14px; align-items: center; padding: 10px; border-radius: 12px; background: var(--bg-main); flex-wrap: wrap; }
-  .video-thumb { width: 120px; height: 68px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--border); }
-  .video-info { flex: 1; min-width: 200px; }
-  .video-title { font-weight: 600; font-size: 0.92rem; margin-bottom: 6px; color: var(--text); text-decoration: none; display: block; }
-  .video-title:hover { color: var(--accent); }
-  .video-date { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
-  .video-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--text-muted); }
-  .video-stats strong { color: var(--text); font-weight: 700; }
+  .post-list { display: flex; flex-direction: column; gap: 12px; }
+  .post-row { display: flex; gap: 14px; align-items: center; padding: 10px; border-radius: 12px; background: var(--bg-main); flex-wrap: wrap; }
+  .post-thumb { width: 68px; height: 68px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--border); }
+  .post-info { flex: 1; min-width: 200px; }
+  .post-caption { font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: var(--text); text-decoration: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .post-caption:hover { color: var(--accent); }
+  .post-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--text-muted); }
+  .post-stats strong { color: var(--text); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -115,10 +115,10 @@
 <header>
   <div class="header-title-group">
     <img class="brand-logo" src="zanjbiil-logo.png" alt="ZANJBIIL" onerror="this.style.display='none'">
-    <h1>▶️ تحليلات يوتيوب</h1>
+    <h1>📷 تحليلات إنستقرام</h1>
   </div>
   <div class="header-actions">
-    <a class="btn btn-ghost" href="/instagram.html">📷 إنستقرام</a>
+    <a class="btn btn-ghost" href="/youtube.html">▶️ يوتيوب</a>
     <a class="btn btn-ghost" href="/accounts.html">حسابات TikTok</a>
     <a class="btn btn-ghost" href="/dashboard.html">لوحة التحكم</a>
   </div>
@@ -126,16 +126,16 @@
 
 <div class="container">
   <form class="search-row" id="searchForm">
-    <input type="text" id="channelInput" placeholder="اسم القناة، أو رابطها، أو ‎@handle" autocomplete="off">
+    <input type="text" id="usernameInput" placeholder="اسم المستخدم (username)، مثل abdulmalik96996" autocomplete="off">
     <button type="submit" class="btn" id="searchBtn">🔍 بحث</button>
   </form>
-  <p class="search-hint">مثال: MrBeast ، أو ‎@MrBeast ، أو https://www.youtube.com/@MrBeast</p>
+  <p class="search-hint">أي حساب Business/Creator عام يعرض إحصائياته العامة فقط. حسابك الخاص (abdulmalik96996) يعرض كمان آخر 15 منشور.</p>
 
   <div id="content">
     <div class="empty-state">
-      <div class="empty-icon">▶️</div>
-      <h2>ابحث عن قناة يوتيوب</h2>
-      <p style="margin-top:8px;">اكتب اسم القناة أو رابطها أعلاه لعرض المشتركين والمشاهدات وآخر الفيديوهات.</p>
+      <div class="empty-icon">📷</div>
+      <h2>ابحث عن حساب إنستقرام</h2>
+      <p style="margin-top:8px;">اكتب اسم المستخدم أعلاه لعرض المتابعين وعدد المنشورات.</p>
     </div>
   </div>
 </div>
@@ -152,7 +152,7 @@ async function init() {
 
   document.getElementById('searchForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const q = document.getElementById('channelInput').value.trim();
+    const q = document.getElementById('usernameInput').value.trim();
     if (!q) return;
     const url = new URL(window.location.href);
     url.searchParams.set('q', q);
@@ -163,7 +163,7 @@ async function init() {
   const params = new URLSearchParams(window.location.search);
   const initialQuery = params.get('q');
   if (initialQuery) {
-    document.getElementById('channelInput').value = initialQuery;
+    document.getElementById('usernameInput').value = initialQuery;
     runSearch(initialQuery);
   }
 }
@@ -175,7 +175,7 @@ async function runSearch(q) {
   contentEl.innerHTML = '<div class="loading">جاري البحث…</div>';
 
   try {
-    const res = await fetch(`/.netlify/functions/youtube-lookup?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
+    const res = await fetch(`/.netlify/functions/instagram-lookup?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
     if (res.status === 401) { window.location.href = '/login.html'; return; }
     const data = await res.json();
 
@@ -192,40 +192,49 @@ async function runSearch(q) {
 }
 
 function render(data) {
-  const channel = data.channel;
-  const videos = data.videos || [];
+  const account = data.account;
+  const posts = data.posts || [];
   const contentEl = document.getElementById('content');
 
-  const handle = channel.customUrl ? (channel.customUrl.startsWith('@') ? channel.customUrl : `@${channel.customUrl}`) : '';
-  const channelUrl = handle ? `https://www.youtube.com/${handle}` : `https://www.youtube.com/channel/${channel.id}`;
-  const subsDisplay = channel.subscriber_count == null ? '🔒 مخفي' : fmt(channel.subscriber_count);
+  const profileUrl = `https://www.instagram.com/${encodeURIComponent(account.username)}/`;
 
   contentEl.innerHTML = `
     <div class="channel-card">
-      ${channel.thumbnail ? `<img class="channel-avatar" src="${escapeAttr(channel.thumbnail)}" alt="">` : ''}
+      ${account.profile_picture ? `<img class="channel-avatar" src="${escapeAttr(account.profile_picture)}" alt="">` : ''}
       <div class="channel-meta">
-        <h2><a href="${escapeAttr(channelUrl)}" target="_blank" rel="noopener">${escapeHtml(channel.title || 'بدون اسم')}</a></h2>
-        ${handle ? `<div class="channel-handle">${escapeHtml(handle)}</div>` : ''}
+        <h2><a href="${escapeAttr(profileUrl)}" target="_blank" rel="noopener">${escapeHtml(account.name || account.username)}</a></h2>
+        <div class="channel-handle">@${escapeHtml(account.username)}</div>
       </div>
     </div>
     <div class="kpis">
-      <div class="kpi"><span class="kpi-value">${subsDisplay}</span><span class="kpi-label">مشتركين</span></div>
-      <div class="kpi"><span class="kpi-value">${fmt(channel.view_count)}</span><span class="kpi-label">إجمالي المشاهدات</span></div>
-      <div class="kpi"><span class="kpi-value">${fmt(channel.video_count)}</span><span class="kpi-label">عدد الفيديوهات</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(account.followers_count)}</span><span class="kpi-label">متابعين</span></div>
+      <div class="kpi"><span class="kpi-value">${fmt(account.media_count)}</span><span class="kpi-label">عدد المنشورات</span></div>
     </div>
     ${
-      videos.length
-        ? `
+      account.is_own
+        ? renderOwnAccountSections(posts)
+        : `<div class="info-box">ℹ️ إنستقرام ما يسمح لنا بعرض تفاصيل منشورات حساب غير حسابنا — فقط الإحصائيات العامة (المتابعين وعدد المنشورات) ظاهرة أعلاه. آخر المنشورات بالتفصيل متاحة فقط لحسابك المتصل (@abdulmalik96996).</div>`
+    }
+  `;
+
+  if (account.is_own && posts.length) drawCharts(posts);
+}
+
+function renderOwnAccountSections(posts) {
+  if (!posts.length) {
+    return `<div class="card empty-state"><div class="empty-icon">🖼️</div><p>ما فيه منشورات لعرضها بهذا الحساب.</p></div>`;
+  }
+  return `
     <div class="charts">
       <div class="card">
         <div class="chart-head">
-          <h2>المشاهدات والإعجابات لكل فيديو</h2>
+          <h2>الإعجابات والتعليقات لكل منشور</h2>
           <div class="chart-head-controls">
-            <div class="legend-row" id="viewsLegend"></div>
-            <div class="chart-type-toggle" id="viewsChartTypeToggle"></div>
+            <div class="legend-row" id="postsLegend"></div>
+            <div class="chart-type-toggle" id="postsChartTypeToggle"></div>
           </div>
         </div>
-        <div id="viewsChartWrap"><canvas id="viewsChart" height="230"></canvas></div>
+        <div id="postsChartWrap"><canvas id="postsChart" height="230"></canvas></div>
       </div>
       <div class="card">
         <div class="chart-head">
@@ -237,52 +246,40 @@ function render(data) {
           <ul class="donut-legend" id="engagementLegend"></ul>
         </div>
       </div>
-    </div>`
-        : ''
-    }
+    </div>
     <div class="card">
-      <h2>آخر ${videos.length} فيديو</h2>
-      ${
-        videos.length
-          ? `<div class="video-list">${videos.map(videoRowHTML).join('')}</div>`
-          : `<div class="empty-state"><div class="empty-icon">🎬</div><p>ما فيه فيديوهات لعرضها بهذي القناة.</p></div>`
-      }
+      <h2>آخر ${posts.length} منشور</h2>
+      <div class="post-list">${posts.map(postRowHTML).join('')}</div>
     </div>
   `;
-
-  if (videos.length) drawCharts(videos);
 }
 
-function videoRowHTML(v) {
-  const dateStr = v.published_at
-    ? new Date(v.published_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
-    : '—';
-  const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}`;
+function postRowHTML(p) {
+  const caption = (p.caption || '').trim().split('\n')[0] || 'منشور بدون وصف';
+  const link = p.permalink || '#';
   return `
-    <div class="video-row">
-      ${v.thumbnail ? `<img class="video-thumb" src="${escapeAttr(v.thumbnail)}" alt="">` : '<div class="video-thumb"></div>'}
-      <div class="video-info">
-        <a class="video-title" href="${escapeAttr(watchUrl)}" target="_blank" rel="noopener">${escapeHtml(v.title || 'بدون عنوان')}</a>
-        <div class="video-date">📅 ${dateStr}</div>
-        <div class="video-stats">
-          <span>👁️ <strong>${fmt(v.view_count)}</strong> مشاهدة</span>
-          <span>❤️ <strong>${fmt(v.like_count)}</strong> إعجاب</span>
-          <span>💬 <strong>${fmt(v.comment_count)}</strong> تعليق</span>
+    <div class="post-row">
+      ${p.thumbnail ? `<img class="post-thumb" src="${escapeAttr(p.thumbnail)}" alt="">` : '<div class="post-thumb"></div>'}
+      <div class="post-info">
+        <a class="post-caption" href="${escapeAttr(link)}" target="_blank" rel="noopener">${escapeHtml(caption)}</a>
+        <div class="post-stats">
+          <span>❤️ <strong>${fmt(p.like_count)}</strong> إعجاب</span>
+          <span>💬 <strong>${fmt(p.comment_count)}</strong> تعليق</span>
         </div>
       </div>
     </div>`;
 }
 
-/* ========== CHARTS (نفس أسلوب dashboard.html) ========== */
+/* ========== CHARTS (نفس أسلوب dashboard.html/youtube.html) ========== */
 
-const CHART_COLORS = { views: '#FF5100', likes: '#6877B1', comments: '#AEB6D8' };
+const CHART_COLORS = { likes: '#FF5100', comments: '#6877B1' };
 
 function sum(arr, key) { return arr.reduce((s, a) => s + (a[key] || 0), 0); }
 
-let viewsChart = null;
+let postsChart = null;
 let engagementChart = null;
-let lastVideos = null;
-let viewsChartType = 'bar'; // 'bar' | 'line' | 'doughnut'
+let lastPosts = null;
+let postsChartType = 'bar'; // 'bar' | 'line' | 'doughnut'
 let engagementChartType = 'doughnut'; // 'bar' | 'line' | 'doughnut'
 
 function renderChartTypeToggle(containerId, currentType, onChange) {
@@ -301,10 +298,10 @@ function renderChartTypeToggle(containerId, currentType, onChange) {
   });
 }
 
-function handleViewsChartTypeChange(type) {
-  viewsChartType = type;
-  renderViewsChart();
-  renderChartTypeToggle('viewsChartTypeToggle', viewsChartType, handleViewsChartTypeChange);
+function handlePostsChartTypeChange(type) {
+  postsChartType = type;
+  renderPostsChart();
+  renderChartTypeToggle('postsChartTypeToggle', postsChartType, handlePostsChartTypeChange);
 }
 function handleEngagementChartTypeChange(type) {
   engagementChartType = type;
@@ -312,48 +309,46 @@ function handleEngagementChartTypeChange(type) {
   renderChartTypeToggle('engagementChartTypeToggle', engagementChartType, handleEngagementChartTypeChange);
 }
 
-function drawCharts(videos) {
-  lastVideos = videos;
+function drawCharts(posts) {
+  lastPosts = posts;
   Chart.defaults.font.family = "'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif";
   Chart.defaults.color = '#5B5E85';
 
-  renderChartTypeToggle('viewsChartTypeToggle', viewsChartType, handleViewsChartTypeChange);
+  renderChartTypeToggle('postsChartTypeToggle', postsChartType, handlePostsChartTypeChange);
   renderChartTypeToggle('engagementChartTypeToggle', engagementChartType, handleEngagementChartTypeChange);
 
-  renderViewsChart();
+  renderPostsChart();
   renderEngagementChart();
 }
 
-// "المشاهدات والإعجابات لكل فيديو": أعمدة أو خطي بمحورين، أو دائري
-// (يعرض توزيع المشاهدات فقط بين الفيديوهات، لأن الدائري ما يقدر يعرض
-// مقياسين بمحورين مختلفين بنفس الوقت).
-function renderViewsChart() {
-  if (!lastVideos) return;
-  if (viewsChart) viewsChart.destroy();
+// "الإعجابات والتعليقات لكل منشور": أعمدة أو خطي بمحورين، أو دائري
+// (يعرض توزيع الإعجابات فقط بين المنشورات). تسميات المحور الأفقي
+// أرقام بسيطة فقط (1، 2، 3...) — وصف المنشور الفعلي يظهر بالتولتيب
+// فقط عند تمرير الفأرة، بدون تكرار تحت المحور.
+function renderPostsChart() {
+  if (!lastPosts) return;
+  if (postsChart) postsChart.destroy();
 
-  const videos = lastVideos;
-  // تسميات المحور الأفقي أرقام بسيطة بس (1، 2، 3...) عشان ما يصير
-  // ازدحام نصي بعناوين مائلة تحت الرسم — عنوان الفيديو الفعلي مصدره
-  // الوحيد صار التولتيب عند تمرير الفأرة (fullTitles تحت).
-  const labels = videos.map((v, i) => String(i + 1));
-  const fullTitles = videos.map((v) => (v.title || '').trim() || 'بدون عنوان');
-  const views = videos.map((v) => v.view_count || 0);
-  const likes = videos.map((v) => v.like_count || 0);
+  const posts = lastPosts;
+  const labels = posts.map((_, i) => String(i + 1));
+  const captions = posts.map((p) => (p.caption || '').trim().split('\n')[0] || 'منشور بدون وصف');
+  const likes = posts.map((p) => p.like_count || 0);
+  const comments = posts.map((p) => p.comment_count || 0);
 
-  document.getElementById('viewsLegend').innerHTML =
-    viewsChartType === 'doughnut'
-      ? `<span class="legend-item"><i style="background:${CHART_COLORS.views}"></i>مشاهدات (بدون الإعجابات بهذا الوضع)</span>`
-      : `<span class="legend-item"><i style="background:${CHART_COLORS.views}"></i>مشاهدات</span>
-         <span class="legend-item"><i style="background:${CHART_COLORS.likes}"></i>إعجابات</span>`;
+  document.getElementById('postsLegend').innerHTML =
+    postsChartType === 'doughnut'
+      ? `<span class="legend-item"><i style="background:${CHART_COLORS.likes}"></i>إعجابات (بدون التعليقات بهذا الوضع)</span>`
+      : `<span class="legend-item"><i style="background:${CHART_COLORS.likes}"></i>إعجابات</span>
+         <span class="legend-item"><i style="background:${CHART_COLORS.comments}"></i>تعليقات</span>`;
 
-  const wrap = document.getElementById('viewsChartWrap');
-  wrap.innerHTML = '<canvas id="viewsChart" height="230"></canvas>';
+  const wrap = document.getElementById('postsChartWrap');
+  wrap.innerHTML = '<canvas id="postsChart" height="230"></canvas>';
 
-  if (viewsChartType === 'doughnut') {
-    const total = views.reduce((a, b) => a + b, 0) || 1;
-    viewsChart = new Chart(document.getElementById('viewsChart'), {
+  if (postsChartType === 'doughnut') {
+    const total = likes.reduce((a, b) => a + b, 0) || 1;
+    postsChart = new Chart(document.getElementById('postsChart'), {
       type: 'doughnut',
-      data: { labels, datasets: [{ data: views, backgroundColor: labels.map((_, i) => shadeColor(CHART_COLORS.views, i)), borderWidth: 0 }] },
+      data: { labels, datasets: [{ data: likes, backgroundColor: labels.map((_, i) => shadeColor(CHART_COLORS.likes, i)), borderWidth: 0 }] },
       options: {
         responsive: true,
         cutout: '55%',
@@ -361,8 +356,8 @@ function renderViewsChart() {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              title: (items) => fullTitles[items[0].dataIndex],
-              label: (item) => `مشاهدات: ${fmt(item.parsed)} (${((item.parsed / total) * 100).toFixed(1)}%)`,
+              title: (items) => captions[items[0].dataIndex],
+              label: (item) => `إعجابات: ${fmt(item.parsed)} (${((item.parsed / total) * 100).toFixed(1)}%)`,
             },
           },
         },
@@ -371,23 +366,23 @@ function renderViewsChart() {
     return;
   }
 
-  const isLine = viewsChartType === 'line';
-  viewsChart = new Chart(document.getElementById('viewsChart'), {
+  const isLine = postsChartType === 'line';
+  postsChart = new Chart(document.getElementById('postsChart'), {
     type: isLine ? 'line' : 'bar',
     data: {
       labels,
       datasets: [
         {
-          label: 'مشاهدات', data: views, yAxisID: 'yViews',
-          ...(isLine
-            ? { borderColor: CHART_COLORS.views, backgroundColor: CHART_COLORS.views, tension: 0.3, fill: false, pointRadius: 3 }
-            : { backgroundColor: CHART_COLORS.views, borderRadius: 4, maxBarThickness: 34 }),
-        },
-        {
           label: 'إعجابات', data: likes, yAxisID: 'yLikes',
           ...(isLine
             ? { borderColor: CHART_COLORS.likes, backgroundColor: CHART_COLORS.likes, tension: 0.3, fill: false, pointRadius: 3 }
             : { backgroundColor: CHART_COLORS.likes, borderRadius: 4, maxBarThickness: 34 }),
+        },
+        {
+          label: 'تعليقات', data: comments, yAxisID: 'yComments',
+          ...(isLine
+            ? { borderColor: CHART_COLORS.comments, backgroundColor: CHART_COLORS.comments, tension: 0.3, fill: false, pointRadius: 3 }
+            : { backgroundColor: CHART_COLORS.comments, borderRadius: 4, maxBarThickness: 34 }),
         },
       ],
     },
@@ -395,37 +390,37 @@ function renderViewsChart() {
       responsive: true,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { title: (items) => fullTitles[items[0].dataIndex] } },
+        tooltip: { callbacks: { title: (items) => captions[items[0].dataIndex] } },
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: '#5B5E85', font: { size: 11 } } },
-        yViews: {
+        yLikes: {
           type: 'linear', position: 'right',
           grid: { color: '#EEF1F6' }, border: { display: false },
-          ticks: { color: CHART_COLORS.views },
-          title: { display: true, text: 'مشاهدات', color: CHART_COLORS.views, font: { size: 11 } },
-        },
-        yLikes: {
-          type: 'linear', position: 'left',
-          grid: { display: false }, border: { display: false },
           ticks: { color: CHART_COLORS.likes },
           title: { display: true, text: 'إعجابات', color: CHART_COLORS.likes, font: { size: 11 } },
+        },
+        yComments: {
+          type: 'linear', position: 'left',
+          grid: { display: false }, border: { display: false },
+          ticks: { color: CHART_COLORS.comments },
+          title: { display: true, text: 'تعليقات', color: CHART_COLORS.comments, font: { size: 11 } },
         },
       },
     },
   });
 }
 
-// "توزيع التفاعل": نسبة كل من المشاهدات/الإعجابات/التعليقات من
-// الإجمالي — دائري (افتراضي) أو أعمدة أو خطي.
+// "توزيع التفاعل": دائري (افتراضي) أو أعمدة أو خطي، لنسبة الإعجابات
+// مقابل التعليقات من إجمالي التفاعل على آخر المنشورات.
 function renderEngagementChart() {
-  if (!lastVideos) return;
+  if (!lastPosts) return;
   if (engagementChart) engagementChart.destroy();
 
-  const videos = lastVideos;
-  const engagementLabels = ['مشاهدات', 'إعجابات', 'تعليقات'];
-  const engagementTotals = [sum(videos, 'view_count'), sum(videos, 'like_count'), sum(videos, 'comment_count')];
-  const engagementColors = [CHART_COLORS.views, CHART_COLORS.likes, CHART_COLORS.comments];
+  const posts = lastPosts;
+  const engagementLabels = ['إعجابات', 'تعليقات'];
+  const engagementTotals = [sum(posts, 'like_count'), sum(posts, 'comment_count')];
+  const engagementColors = [CHART_COLORS.likes, CHART_COLORS.comments];
   const engagementTotal = engagementTotals.reduce((a, b) => a + b, 0) || 1;
 
   const layoutEl = document.getElementById('engagementLayout');
@@ -448,7 +443,7 @@ function renderEngagementChart() {
           {
             label: 'الإجمالي', data: engagementTotals,
             ...(isLine
-              ? { borderColor: CHART_COLORS.views, backgroundColor: engagementColors, tension: 0.3, fill: false, pointRadius: 5, pointBackgroundColor: engagementColors }
+              ? { borderColor: CHART_COLORS.likes, backgroundColor: engagementColors, tension: 0.3, fill: false, pointRadius: 5, pointBackgroundColor: engagementColors }
               : { backgroundColor: engagementColors, borderRadius: 4, maxBarThickness: 46 }),
           },
         ],
@@ -474,8 +469,6 @@ function renderEngagementChart() {
   });
 }
 
-// تدرجات لون بسيطة من لون أساسي، لتمييز شرائح رسم المشاهدات الدائري
-// (كل فيديو شريحة، فنحتاج ألوان مائزة بينها).
 function shadeColor(hex, index) {
   const amount = ((index * 37) % 100) / 100;
   const num = parseInt(hex.replace('#', ''), 16);
