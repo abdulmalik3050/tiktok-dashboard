@@ -278,16 +278,6 @@ const CHART_COLORS = { views: '#FF5100', likes: '#6877B1', comments: '#AEB6D8' }
 
 function sum(arr, key) { return arr.reduce((s, a) => s + (a[key] || 0), 0); }
 
-// عنوان مختصر لمحور الرسم: أول 3 كلمات من عنوان الفيديو الفعلي، مع
-// "..." بالنهاية لو اختصرناه — نفس منطق صفحة تيك توك بالضبط.
-function chartAxisLabel(v) {
-  const title = (v.title || '').trim();
-  if (!title) return 'فيديو بدون عنوان';
-  const words = title.split(/\s+/).slice(0, 3).join(' ');
-  const short = words.length > 22 ? words.slice(0, 22).trim() : words;
-  return short.length < title.length ? `${short}...` : short;
-}
-
 let viewsChart = null;
 let engagementChart = null;
 let lastVideos = null;
@@ -341,7 +331,10 @@ function renderViewsChart() {
   if (viewsChart) viewsChart.destroy();
 
   const videos = lastVideos;
-  const labels = videos.map((v) => chartAxisLabel(v));
+  // تسميات المحور الأفقي أرقام بسيطة بس (1، 2، 3...) عشان ما يصير
+  // ازدحام نصي بعناوين مائلة تحت الرسم — عنوان الفيديو الفعلي مصدره
+  // الوحيد صار التولتيب عند تمرير الفأرة (fullTitles تحت).
+  const labels = videos.map((v, i) => String(i + 1));
   const fullTitles = videos.map((v) => (v.title || '').trim() || 'بدون عنوان');
   const views = videos.map((v) => v.view_count || 0);
   const likes = videos.map((v) => v.like_count || 0);
