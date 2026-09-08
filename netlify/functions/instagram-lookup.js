@@ -50,7 +50,16 @@ const EXPIRY_SAFETY_MS = 60 * 60 * 1000; // ساعة
 // لو باقي أقل من هذا، نجدده استباقيًا (ig_refresh_token) قبل الاستخدام.
 const REFRESH_BEFORE_MS = 5 * 24 * 60 * 60 * 1000; // 5 أيام
 
-async function igFetch(path, params, accessToken) {
+// يبني رسالة خطأ من استجابة Meta الخام — نطبع الجسم الكامل باللوق،
+// ونرجّع الجسم الكامل أيضًا بالرسالة المعروضة بالواجهة مباشرة (مو بس
+// ملخّص)، عشان تقدر تشوف كل تفاصيل الخطأ الحقيقية بدون فتح أي سجلات.
+function describeMetaError(step, status, data) {
+  const raw = JSON.stringify(data);
+  console.error(`instagram-lookup: [${step}] Meta API error — status=${status} raw=${raw}`);
+  return `فشل بخطوة "${step}" (HTTP ${status}) — استجابة Meta الكاملة: ${raw}`;
+}
+
+async function igFetch(step, path, params, accessToken) {
   const url = new URL(`${IG_HOST}/${IG_VERSION}/${path}`);
   Object.entries(params || {}).forEach(([key, value]) => url.searchParams.set(key, value));
   url.searchParams.set("access_token", accessToken);
@@ -59,8 +68,7 @@ async function igFetch(path, params, accessToken) {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const message = (data && data.error && data.error.message) || `Instagram API error (${res.status})`;
-    const err = new Error(message);
+    const err = new Error(describeMetaError(step, res.status, data));
     err.status = res.status >= 400 && res.status < 500 ? 400 : 502;
     throw err;
   }
@@ -80,11 +88,7 @@ async function exchangeForLongLivedToken(shortLivedToken) {
   const res = await fetch(url.toString());
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.access_token) {
-    const message =
-      (data && data.error_message) ||
-      (data && data.error && data.error.message) ||
-      `تعذر تبديل توكن إنستقرام القصير لـ long-lived (${res.status}).`;
-    throw Object.assign(new Error(message), { status: 502 });
+    throw Object.assign(new Error(describeMetaError("تبديل التوكن لـ long-lived (ig_exchange_token)", res.status, data)), { status: 502 });
   }
   return data; // { access_token, token_type, expires_in }
 }
@@ -97,8 +101,7 @@ async function refreshLongLivedToken(longLivedToken) {
   const res = await fetch(url.toString());
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.access_token) {
-    const message = (data && data.error_message) || (data && data.error && data.error.message) || `تعذر تجديد توكن إنستقرام (${res.status}).`;
-    throw Object.assign(new Error(message), { status: 502 });
+    throw Object.assign(new Error(describeMetaError("تجديد التوكن (ig_refresh_token)", res.status, data)), { status: 502 });
   }
   return data; // { access_token, token_type, expires_in }
 }
@@ -139,18 +142,31 @@ async function getValidAccessToken() {
     }
   }
 
-  // ما فيه توكن مخزّن صالح: نبدّل التوكن القصير من متغير البيئة.
-  const shortLivedToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-  if (!shortLivedToken) {
+  // ما فيه توكن مخزّن صالح: نستخدم توكن متغير البيئة.
+  const envToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+  if (!envToken) {
     throw Object.assign(new Error("متغير INSTAGRAM_ACCESS_TOKEN غير مُعد بإعدادات الخادم."), { status: 500 });
   }
-  const exchanged = await exchangeForLongLivedToken(shortLivedToken);
-  await storeToken(exchanged.access_token, exchanged.expires_in);
-  return exchanged.access_token;
+
+  // مهم: تبديله لـ long-lived خطوة "تحسين" منفصلة، مو شرط لنجاح الطلب.
+  // لو فشلت (سر التطبيق غلط، أو التوكن نفسه غير مؤهل للتبديل لأي سبب)،
+  // ما نوقف طلب المستخدم الحالي — نكمل بتوكن متغير البيئة الخام مباشرة،
+  // ونسجّل سبب فشل التبديل فقط. هذا يفصل مشكلة "التبديل" عن مشكلة
+  // "الاستخدام الفعلي"، فلو نجح البحث بعدها نعرف يقينًا إن العلة
+  // بخطوة ig_exchange_token تحديدًا لا بباقي الكود.
+  try {
+    const exchanged = await exchangeForLongLivedToken(envToken);
+    await storeToken(exchanged.access_token, exchanged.expires_in);
+    return exchanged.access_token;
+  } catch (err) {
+    console.error("instagram-lookup: token exchange failed, falling back to raw INSTAGRAM_ACCESS_TOKEN for this request:", err.message);
+    return envToken;
+  }
 }
 
 async function fetchOwnPosts(accessToken) {
   const mediaData = await igFetch(
+    "جلب آخر المنشورات (/me/media)",
     "me/media",
     { fields: "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count", limit: String(MAX_POSTS) },
     accessToken
@@ -188,6 +204,7 @@ exports.handler = async function (event) {
     const accessToken = await getValidAccessToken();
 
     const me = await igFetch(
+      "جلب بيانات الحساب المتصل (/me)",
       "me",
       { fields: "id,username,name,account_type,media_count,followers_count,profile_picture_url" },
       accessToken
@@ -217,6 +234,7 @@ exports.handler = async function (event) {
     // حساب ثاني: Business Discovery — إحصائيات عامة بس، إنستقرام ما
     // يسمح بجلب قائمة منشورات حساب غير حسابنا.
     const discovery = await igFetch(
+      "البحث عن الحساب (business_discovery)",
       me.id,
       { fields: `business_discovery.username(${q}){username,name,followers_count,media_count,profile_picture_url}` },
       accessToken
