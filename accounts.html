@@ -41,6 +41,12 @@
     z-index: 100;
   }
   header h1 { font-size: 1.25rem; font-weight: 700; }
+  /* TEMP-TIKTOK-REVIEW: نفس اسم/شعار "Social Dashboard Sync" اللي بفيديو
+     الدِمو المُسلَّم لـ TikTok for Developers. هذي الصفحة أصلًا ما
+     تغيّرت ألوانها لـ ZANJBIIL، فما فيه شي يُرجَع هنا — فقط توضيح الاسم. */
+  .header-title-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .legacy-brand { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+  .legacy-brand strong { color: var(--accent); }
   .header-right { display: flex; align-items: center; gap: 10px; }
   .btn {
     background: var(--accent); color: #fff; text-decoration: none;
@@ -121,7 +127,10 @@
 <body>
 
 <header>
-  <h1>🔗 الحسابات المتصلة</h1>
+  <div class="header-title-group">
+    <span class="legacy-brand">📊 Social Dashboard <strong>Sync</strong></span>
+    <h1>🔗 الحسابات المتصلة</h1>
+  </div>
   <div class="header-right">
     <span class="whoami" id="whoami"></span>
     <button class="btn secondary" id="manageUsersBtn" style="display:none;">👥 إدارة الفريق</button>

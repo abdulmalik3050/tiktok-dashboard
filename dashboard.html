@@ -41,6 +41,11 @@
   }
   .header-title-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .brand-logo { height: 30px; width: auto; display: block; }
+  /* TEMP-TIKTOK-REVIEW: اسم/شعار مؤقت لحين اعتماد تطبيق TikTok for
+     Developers — يطابق فيديو الدِمو المُسلَّم باسم "Social Dashboard
+     Sync". الألوان (--accent/--text) ما تغيّرت، بس تسمية النص. */
+  .legacy-brand { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+  .legacy-brand strong { color: var(--accent); }
   header h1 { font-size: 1.25rem; font-weight: 700; }
   .header-actions { display: flex; align-items: center; gap: 10px; }
   .btn { background: var(--accent); color: #fff; text-decoration: none; padding: 9px 16px; border-radius: 10px; font-size: 0.85rem; border: none; cursor: pointer; font-family: inherit; }
@@ -157,7 +162,12 @@
  
 <header>
   <div class="header-title-group">
+    <!-- TEMP-TIKTOK-REVIEW:BRAND — شعار ZANJBIIL معطّل مؤقتًا لحين اعتماد
+         طلب TikTok for Developers. للرجوع: احذف عنصر legacy-brand بالأسفل
+         وأزل التعليق عن سطر الصورة الأصلي.
     <img class="brand-logo" src="zanjbiil-logo.png" alt="ZANJBIIL" onerror="this.style.display='none'">
+    -->
+    <span class="legacy-brand">📊 Social Dashboard <strong>Sync</strong></span>
     <h1>📈 لوحة التحكم التفصيلية</h1>
   </div>
   <div class="header-actions">

@@ -62,6 +62,14 @@ function describeMetaError(step, status, data) {
 async function igFetch(step, path, params, accessToken) {
   const url = new URL(`${IG_HOST}/${IG_VERSION}/${path}`);
   Object.entries(params || {}).forEach(([key, value]) => url.searchParams.set(key, value));
+
+  // نطبع الـ URL الكامل بالضبط زي ما بيترسل — بدون access_token (نستبدله
+  // بـ REDACTED بدل ما نطبع سر بسجلات فعلية)، عشان تقدر تشوف query params
+  // الحقيقية المرسلة لـ Meta.
+  const redactedUrl = new URL(url.toString());
+  redactedUrl.searchParams.set("access_token", "REDACTED");
+  console.log(`instagram-lookup: [${step}] GET ${redactedUrl.toString()}`);
+
   url.searchParams.set("access_token", accessToken);
 
   const res = await fetch(url.toString());
