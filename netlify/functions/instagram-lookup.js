@@ -50,16 +50,13 @@ const EXPIRY_SAFETY_MS = 60 * 60 * 1000; // ساعة
 // لو باقي أقل من هذا، نجدده استباقيًا (ig_refresh_token) قبل الاستخدام.
 const REFRESH_BEFORE_MS = 5 * 24 * 60 * 60 * 1000; // 5 أيام
 
-// يبني رسالة خطأ ولوق مفصّل من استجابة Meta الخام — نطبع الجسم الكامل
-// باللوق (code/type/subcode/fbtrace_id) عشان لو حد فتح سجلات الدالة
-// يلقى التفاصيل كاملة، ونرجع رسالة واضحة تحدد اسم الخطوة اللي فشلت
-// للواجهة مباشرة (بدون ما يحتاج المستخدم يفتح السجلات أصلًا).
+// يبني رسالة خطأ من استجابة Meta الخام — نطبع الجسم الكامل باللوق،
+// ونرجّع الجسم الكامل أيضًا بالرسالة المعروضة بالواجهة مباشرة (مو بس
+// ملخّص)، عشان تقدر تشوف كل تفاصيل الخطأ الحقيقية بدون فتح أي سجلات.
 function describeMetaError(step, status, data) {
-  const e = data && data.error;
-  const message = (data && data.error_message) || (e && e.message) || `HTTP ${status}`;
-  console.error(`instagram-lookup: [${step}] Meta API error — status=${status}`, JSON.stringify(data));
-  const detail = e && (e.type || e.code) ? ` [${[e.type, e.code, e.error_subcode].filter(Boolean).join("/")}]` : "";
-  return `فشل بخطوة "${step}": ${message}${detail}`;
+  const raw = JSON.stringify(data);
+  console.error(`instagram-lookup: [${step}] Meta API error — status=${status} raw=${raw}`);
+  return `فشل بخطوة "${step}" (HTTP ${status}) — استجابة Meta الكاملة: ${raw}`;
 }
 
 async function igFetch(step, path, params, accessToken) {
@@ -145,14 +142,26 @@ async function getValidAccessToken() {
     }
   }
 
-  // ما فيه توكن مخزّن صالح: نبدّل التوكن القصير من متغير البيئة.
-  const shortLivedToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-  if (!shortLivedToken) {
+  // ما فيه توكن مخزّن صالح: نستخدم توكن متغير البيئة.
+  const envToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+  if (!envToken) {
     throw Object.assign(new Error("متغير INSTAGRAM_ACCESS_TOKEN غير مُعد بإعدادات الخادم."), { status: 500 });
   }
-  const exchanged = await exchangeForLongLivedToken(shortLivedToken);
-  await storeToken(exchanged.access_token, exchanged.expires_in);
-  return exchanged.access_token;
+
+  // مهم: تبديله لـ long-lived خطوة "تحسين" منفصلة، مو شرط لنجاح الطلب.
+  // لو فشلت (سر التطبيق غلط، أو التوكن نفسه غير مؤهل للتبديل لأي سبب)،
+  // ما نوقف طلب المستخدم الحالي — نكمل بتوكن متغير البيئة الخام مباشرة،
+  // ونسجّل سبب فشل التبديل فقط. هذا يفصل مشكلة "التبديل" عن مشكلة
+  // "الاستخدام الفعلي"، فلو نجح البحث بعدها نعرف يقينًا إن العلة
+  // بخطوة ig_exchange_token تحديدًا لا بباقي الكود.
+  try {
+    const exchanged = await exchangeForLongLivedToken(envToken);
+    await storeToken(exchanged.access_token, exchanged.expires_in);
+    return exchanged.access_token;
+  } catch (err) {
+    console.error("instagram-lookup: token exchange failed, falling back to raw INSTAGRAM_ACCESS_TOKEN for this request:", err.message);
+    return envToken;
+  }
 }
 
 async function fetchOwnPosts(accessToken) {
