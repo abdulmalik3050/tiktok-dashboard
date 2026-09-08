@@ -32,4 +32,10 @@ function getUsersStore() {
   return getNamedStore("app-users");
 }
 
-module.exports = { getAccountsStore, getRateLimitStore, getUsersStore };
+// مخزن عام لإعدادات/توكنات على مستوى التطبيق (مثلاً: التوكن الطويل
+// الأمد لإنستقرام بعد تبديله)، منفصل عن حسابات تيك توك.
+function getSettingsStore() {
+  return getNamedStore("app-settings");
+}
+
+module.exports = { getAccountsStore, getRateLimitStore, getUsersStore, getSettingsStore };

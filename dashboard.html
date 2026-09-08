@@ -163,6 +163,7 @@
   <div class="header-actions">
     <button class="btn btn-ghost" id="openColorsBtn">🎨 تخصيص الألوان</button>
     <a class="btn btn-ghost" href="/youtube.html">▶️ يوتيوب</a>
+    <a class="btn btn-ghost" href="/instagram.html">📷 إنستقرام</a>
     <a class="btn" href="/accounts.html">← الحسابات المتصلة</a>
   </div>
 </header>
@@ -694,17 +695,6 @@ function pctChange(before, after) {
  
 /* ========== CHARTS ========== */
 
-// عنوان مختصر لمحور الرسم البياني: أول 3 كلمات من عنوان الفيديو
-// الفعلي (نفس النص اللي يظهر بقائمة الفيديو المرجعي)، مع "..." بالنهاية
-// لو اختصرناه، عشان ما يزدحم المحور بعنوان طويل.
-function chartAxisLabel(v) {
-  const title = (v.title || '').trim();
-  if (!title) return 'فيديو بدون عنوان';
-  const words = title.split(/\s+/).slice(0, 3).join(' ');
-  const short = words.length > 22 ? words.slice(0, 22).trim() : words;
-  return short.length < title.length ? `${short}...` : short;
-}
-
 let lastVideos = null;
 let viewsChartType = 'bar'; // 'bar' | 'line' | 'doughnut'
 let engagementChartType = 'doughnut'; // 'bar' | 'line' | 'doughnut'
@@ -759,7 +749,10 @@ function renderViewsChart() {
 
   const colors = loadColors();
   const videos = lastVideos;
-  const labels = videos.map((v) => chartAxisLabel(v));
+  // تسميات المحور الأفقي أرقام بسيطة بس (1، 2، 3...) عشان ما يصير
+  // ازدحام نصي بعناوين مائلة تحت الرسم — عنوان الفيديو الفعلي مصدره
+  // الوحيد صار التولتيب عند تمرير الفأرة (fullTitles تحت).
+  const labels = videos.map((v, i) => String(i + 1));
   const fullTitles = videos.map((v) => (v.title || '').trim() || 'فيديو بدون عنوان');
   const views = videos.map((v) => v.view_count || 0);
   const likes = videos.map((v) => v.like_count || 0);
