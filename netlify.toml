@@ -19,3 +19,4 @@
   from = "/privacy"
   to = "/privacy-tiktok.html"
   status = 200
+  force = true
