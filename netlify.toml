@@ -20,3 +20,14 @@
   to = "/privacy-tiktok.html"
   status = 200
   force = true
+
+# نفس نمط /privacy بالضبط: /terms هو الرابط الظاهر بصفحة /login
+# والمُسلَّم بطلب مراجعة TikTok for Developers — يوجّه صراحة للنسخة
+# الإنجليزية القديمة (terms-tiktok.html). لا يمس هذا الرابط
+# /terms.html بامتداده الكامل — يبقى يفتح مباشرة على terms.html
+# (النسخة العربية) كملف ثابت عادي، بدون أي قاعدة توجيه له هنا.
+[[redirects]]
+  from = "/terms"
+  to = "/terms-tiktok.html"
+  status = 200
+  force = true
