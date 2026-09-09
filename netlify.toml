@@ -9,3 +9,13 @@
   from = "/tiktok/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# /privacy (بدون امتداد) هو الرابط الظاهر بصفحة /login والمُسلَّم بطلب
+# مراجعة TikTok for Developers — يوجّه صراحة للنسخة الإنجليزية القديمة
+# (privacy-tiktok.html). لا يمس هذا الرابط /privacy.html بامتداده الكامل
+# — يبقى يفتح مباشرة على privacy.html (النسخة العربية) كملف ثابت عادي،
+# بدون أي قاعدة توجيه له هنا.
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy-tiktok.html"
+  status = 200
