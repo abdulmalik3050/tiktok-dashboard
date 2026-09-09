@@ -1,39 +1,97 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Policy - Social Dashboard Sync</title>
+<title>سياسة الخصوصية - ZANJBIIL Dashboard</title>
 <style>
-  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; max-width: 720px; margin: 60px auto; padding: 0 24px; line-height: 1.7; color: #1a1a2e; }
-  h1 { font-size: 28px; margin-bottom: 8px; }
-  p.updated { color: #666; margin-bottom: 32px; }
-  h2 { font-size: 18px; margin-top: 28px; }
-  a { color: #fe2c55; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 20px;
+    line-height: 1.8;
+    color: #222;
+    background: #fafafa;
+  }
+  h1 {
+    color: #1a1a2e;
+    border-bottom: 3px solid #4a4ae0;
+    padding-bottom: 10px;
+  }
+  h2 {
+    color: #333;
+    margin-top: 30px;
+  }
+  .updated {
+    color: #777;
+    font-size: 0.9em;
+    margin-bottom: 30px;
+  }
+  ul {
+    padding-right: 20px;
+  }
+  .contact {
+    background: #eef0ff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+  }
 </style>
 </head>
 <body>
-<h1>Privacy Policy</h1>
-<p class="updated">Last updated: August 2026</p>
 
-<p>Social Dashboard Sync is a multi-account social media analytics service. With a user's explicit authorization via the official TikTok API, it retrieves post performance metrics (views, likes, comments, shares, follower counts, and related engagement data) and displays them on a secure, password-protected analytics dashboard so account owners and their authorized team members can track performance over time.</p>
+<h1>سياسة الخصوصية - ZANJBIIL Dashboard</h1>
+<p class="updated">آخر تحديث: سبتمبر 2026</p>
 
-<h2>Data We Access</h2>
-<p>Through the TikTok API, and only after a user connects their account via TikTok's official OAuth authorization flow, we access: basic profile information (display name, avatar, follower/following/likes counts) and public post metrics (video titles, view/like/comment/share counts). We do not access private messages, personal contact details, payment information, or any data unrelated to public post performance.</p>
+<p>
+  يوضح هذا المستند كيف يتعامل تطبيق "ZANJBIIL Dashboard" مع البيانات التي يصل إليها
+  عبر واجهات ميتا (فيسبوك وإنستقرام)، وذلك التزامًا بمتطلبات مراجعة التطبيقات (App Review)
+  الخاصة بشركة Meta.
+</p>
 
-<h2>Data Storage and Security</h2>
-<p>Connected account data is stored in encrypted form in our secure cloud infrastructure (Netlify Blobs), accessible only to authenticated, authorized users of the account that connected it. OAuth refresh tokens are encrypted at rest. We do not sell, rent, or share this data with third parties for advertising or any other unauthorized purpose.</p>
+<h2>البيانات التي نجمعها</h2>
+<p>يصل التطبيق إلى بيانات عامة (Public) لحسابات إنستقرام تجارية (Business/Creator)، وتشمل:</p>
+<ul>
+  <li>اسم المستخدم (username) والاسم المعروض</li>
+  <li>عدد المتابعين والمتابَعين (followers / following)</li>
+  <li>عدد المنشورات ومحتواها العام</li>
+  <li>إحصائيات تفاعل عامة (مثل عدد الإعجابات والتعليقات على المنشورات العامة)</li>
+</ul>
+<p>
+  هذه البيانات تُجلب فقط للحسابات العامة (Public Business/Creator accounts) التي يقوم
+  المستخدم بالبحث عنها طوعًا داخل لوحة التحكم، ولا يتم جمع أي بيانات خاصة أو رسائل مباشرة.
+</p>
 
-<h2>Data Retention and Deletion</h2>
-<p>Data is retained for as long as the account remains connected to the dashboard. A user can disconnect their TikTok account and permanently delete all associated stored data at any time from within the dashboard.</p>
+<h2>كيف نستخدم هذه البيانات</h2>
+<p>
+  تُستخدم البيانات بشكل حصري لعرض إحصائيات وتحليلات داخل لوحة التحكم (Dashboard) الخاصة
+  بالمستخدم، لمساعدته على متابعة أداء حسابات إنستقرام العامة التي يهتم بتحليلها
+  (مثل حسابات المنافسين أو الحسابات ذات الاهتمام العام).
+</p>
 
-<h2>Automatic Refresh</h2>
-<p>To keep dashboards accurate, connected accounts are periodically re-synced with TikTok (approximately every 15 minutes) so that new posts appear and deleted posts are automatically removed from the dashboard.</p>
+<h2>تخزين البيانات</h2>
+<p>
+  لا يقوم التطبيق بتخزين البيانات بشكل دائم على خوادم خارجية. يتم جلب البيانات مباشرة
+  من واجهة برمجة تطبيقات إنستقرام (Instagram Graph API) وعرضها لحظيًا داخل لوحة التحكم.
+</p>
 
-<h2>Your Rights</h2>
-<p>You may disconnect your TikTok account and request deletion of your data at any time. You may also revoke this application's access directly from your TikTok account settings.</p>
+<h2>مشاركة البيانات مع أطراف ثالثة</h2>
+<p>
+  لا تتم مشاركة أي بيانات يصل إليها التطبيق مع أي طرف ثالث لأي غرض تجاري أو تسويقي.
+</p>
 
-<h2>Contact</h2>
-<p>For any privacy-related questions, please contact us through the details provided on our website.</p>
+<h2>حذف البيانات</h2>
+<p>
+  بما أن التطبيق لا يخزّن بيانات المستخدمين بشكل دائم، فلا توجد بيانات مخزّنة يلزم حذفها.
+  لأي استفسار بخصوص البيانات، يمكن التواصل معنا عبر البريد الإلكتروني أدناه.
+</p>
+
+<h2>التواصل معنا</h2>
+<div class="contact">
+  <p>لأي أسئلة متعلقة بسياسة الخصوصية هذه، يمكن التواصل عبر:</p>
+  <p>البريد الإلكتروني: abdulmalik96996@gmail.com</p>
+</div>
+
 </body>
 </html>
