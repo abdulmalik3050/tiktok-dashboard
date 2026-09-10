@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>استقبال تسجيل الدخول</title>
+<style>
+  :root {
+    --bg-main: #F4F6FB;
+    --bg-card: #FFFFFF;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --success: #16A34A;
+    --success-bg: #ECFDF5;
+    --error: #DC2626;
+    --error-bg: #FEF2F2;
+    --neutral: #92400E;
+    --neutral-bg: #FFFBEB;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-main);
+    color: var(--text);
+    direction: rtl;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: var(--bg-card);
+    border-radius: 18px;
+    box-shadow: var(--card-shadow);
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 440px;
+    text-align: center;
+  }
+  .icon { font-size: 2.6rem; margin-bottom: 14px; }
+  h1 { font-size: 1.15rem; margin-bottom: 8px; }
+  .sub { color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-bottom: 4px; }
+  .status-box {
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 18px;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    text-align: start;
+  }
+  .status-box.success { background: var(--success-bg); color: var(--success); }
+  .status-box.error { background: var(--error-bg); color: var(--error); }
+  .status-box.neutral { background: var(--neutral-bg); color: var(--neutral); }
+  .dev-box {
+    margin-top: 18px;
+    text-align: start;
+  }
+  .dev-box label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .code-value {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+    word-break: break-all;
+    direction: ltr;
+    text-align: left;
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <div class="loading">
+    <p class="sub">جاري التحقق…</p>
+  </div>
+</div>
+
+<script>
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function render() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+  const errorDescription = params.get('error_description');
+  const card = document.getElementById('card');
+
+  if (error) {
+    card.innerHTML = `
+      <div class="icon">⚠️</div>
+      <h1>تعذّر تسجيل الدخول</h1>
+      <p class="sub">صار خطأ أثناء ربط الحساب عبر فيسبوك/إنستقرام.</p>
+      <div class="status-box error">
+        <strong>${escapeHtml(error)}</strong>
+        ${errorDescription ? `<br>${escapeHtml(errorDescription)}` : ''}
+      </div>
+    `;
+    return;
+  }
+
+  if (code) {
+    card.innerHTML = `
+      <div class="icon">✅</div>
+      <h1>تم تسجيل الدخول بنجاح</h1>
+      <p class="sub">اكتمل ربط الحساب عبر فيسبوك/إنستقرام، تقدر تغلق هذي الصفحة.</p>
+      <div class="dev-box">
+        <label>الكود (للمطوّر فقط)</label>
+        <div class="code-value">${escapeHtml(code)}</div>
+      </div>
+    `;
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="icon">ℹ️</div>
+    <h1>لا يوجد كود دخول</h1>
+    <div class="status-box neutral">
+      يبدو أنك فتحت الصفحة مباشرة بدون تسجيل دخول. هذي الصفحة مخصصة
+      لاستقبال الرد التلقائي من فيسبوك/إنستقرام بعد تسجيل الدخول، مو
+      للفتح المباشر.
+    </div>
+  `;
+}
+
+render();
+</script>
+
+</body>
+</html>
